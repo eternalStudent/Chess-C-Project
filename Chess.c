@@ -7,15 +7,18 @@
 #define SETTINGS 0
 #define GAME     1
 #define UNDEFINED 101
+#define BEST     0
 #define str_equals(x, y) strcmp(x, y) == 0
 #define toBlack(x) toupper(x)
 
 char** board;
-int human;
+int player1;
 int maxRecursionDepth;
 int state;
+int gameMode;
 struct LinkedList* humanPossibleMoves;
 int turn;
+int first;
 
 
 /*
@@ -41,11 +44,13 @@ void initialize(){
 		exit(0);
 	}
 	Board_init(board);
-	human = WHITE;
+	player1 = WHITE;
 	maxRecursionDepth = 1;
 	state = SETTINGS;
 	humanPossibleMoves = NULL;
-	turn = human;
+	turn = player1;
+	first = WHITE;
+	gameMode = 1;
 }
 
 /*
@@ -118,7 +123,7 @@ int readPiece(){
 	char pieceString[7];
 	int color;
 	char piece;
-	if (scanf("%6s %7s", colorString, pieceString) < 0){
+	if (scanf("%5s %6s", colorString, pieceString) < 0){
 		return -1;
 	}
 	color = stringToColor(colorString);
@@ -160,6 +165,76 @@ int setPiece(){
 	return 0;
 }
 
+int setGameMode(){
+	int mode;
+	if (scanf("%d", &mode) < 0){
+		return -1;
+	}
+	
+	switch(mode){
+		case 1: 
+		gameMode = 1;
+		printf("Running game in 2 players mode\n");
+		break;
+		case 2:
+		gameMode = 2;
+		printf("Running game in player vs. AI mode\n");
+		break;
+		default: return -3;
+	}
+	return 0;
+}
+
+int setDifficulty(){
+	if (gameMode != 2){
+		return -1;
+	}
+	
+	char diff[6];
+	scanf("%5s", diff);
+	if (str_equals(diff, "best")){
+		maxRecursionDepth = BEST;
+		return 0;
+	}
+	if (!str_equals(diff, "depth")){
+		return -1;
+	}
+	
+	int depth;
+	scanf("%d", &depth);
+	if (depth < 1 || depth > 4){
+		return -4;
+	}
+	maxRecursionDepth = depth;
+	return 0;
+}
+
+int setUserColor(){
+	if (gameMode != 2){
+		return -1;
+	}
+	
+	char colorString[6];
+	scanf("%5s", colorString);
+	int color = stringToColor(colorString);
+	if (color == -1){
+		return -1;
+	}
+	player1 = color;
+	return 0;
+}
+
+int setFirstPlayer(){
+	char colorString[6];
+	scanf("%5s", colorString);
+	int color = stringToColor(colorString);
+	if (color == -1){
+		return -1;
+	}
+	turn = color;
+	return 0;
+}
+
 /* 
  * Performs a move on the board according to input from the user.
  * The move can consist of a single step, or several steps.
@@ -187,7 +262,7 @@ int updatePossibleMoves(){
 		humanPossibleMoves = NULL;
 	}
 	
-	humanPossibleMoves = Board_getPossibleMoves(board, human);
+	humanPossibleMoves = Board_getPossibleMoves(board, player1);
 	if (allocationFailed(humanPossibleMoves)){
 		return 21;
 	}
@@ -202,13 +277,13 @@ int updatePossibleMoves(){
  */
 int executeCommand(char* command){
 	if (str_equals(command, "game_mode")){
-		//return setGameMode();
+		return setGameMode();
 	}
 	if (str_equals(command, "difficulty")){
-		//return setDifficulty();
+		return setDifficulty();
 	}
 	if (str_equals(command, "user_color")){
-		//return setUserColor();
+		return setUserColor();
 	}
 	if (str_equals(command, "load")){
 		//return loadGame();
@@ -218,7 +293,7 @@ int executeCommand(char* command){
 		return 0;
 	}
 	if (str_equals(command, "next_player")){
-		//return setPlayFirst();
+		return setFirstPlayer();
 	}
 	if (str_equals(command, "rm")){
 		return removePiece();
@@ -248,6 +323,8 @@ void printError(int error){
 		case  0: break;
 		case -1: printf("Illegal command, please try again\n"); break;
 		case -2: printf("Invalid position on the board\n"); break;
+		case -3: printf("Wrong game mode\n"); break;
+		case -4: printf("Wrong value for minimax depth. The value should be between 1 to 4\n"); break;
 	}
 }
 
@@ -282,8 +359,8 @@ struct PossibleMove* minimax(struct PossibleMove* possibleMove, int depth, int p
 			PossibleMove_free(temp);
 		}		
 		if (extremum == UNDEFINED || 
-				(player != human && score >  extremum) || 
-				(player == human && score <  extremum) || 
+				(player != player1 && score >  extremum) || 
+				(player == player1 && score <  extremum) || 
 				(rand()%2       && score == extremum)
 			){
 			extremum = score;
@@ -300,7 +377,7 @@ struct PossibleMove* minimax(struct PossibleMove* possibleMove, int depth, int p
 void computerTurn(){
 	struct PossibleMove possibleMove;
 	possibleMove.board = board;
-	struct PossibleMove* bestMove = minimax(&possibleMove, maxRecursionDepth, !human);
+	struct PossibleMove* bestMove = minimax(&possibleMove, maxRecursionDepth, !player1);
 	printf("Computer: ");
 	PossibleMove_print(bestMove);
 	printf("\n");
@@ -315,7 +392,7 @@ void computerTurn(){
  * The human turn procedure
  */
 void humanTurn(){
-	while (turn == human){
+	while (turn == player1){
 		if (state == GAME){
 			printf("Enter your move:\n");
 		}
@@ -332,7 +409,7 @@ int main(){
 	printf("Enter game settings:\n");
 	int gameOver = 0;
 	while (!gameOver){
-		if (turn == human){
+		if (turn == player1){
 			humanTurn();
 		}
 		else{
