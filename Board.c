@@ -1,6 +1,5 @@
 #include <stdio.h>
 #include <ctype.h>
-#include <assert.h>
 #include "Board.h"
 
 /*
@@ -252,9 +251,12 @@ static struct LinkedList* getPawnMoves(char** board, int fromX, int fromY){
 		}
 		
 		int canMoveForward = Board_isEmpty(board, toX, toY) && sideward == 0;
-		int canCapture = Board_getColor(board, toX, toY) != player;
+		int canCapture = Board_getColor(board, toX, toY) == !player && sideward != 0;
 		if (canMoveForward || canCapture){
-			assert(PossibleMoveList_add(possibleMoves, fromX, fromY, toX, toY, board) == 0);
+			if (PossibleMoveList_add(possibleMoves, fromX, fromY, toX, toY, board) != 0){
+				PossibleMoveList_free(possibleMoves);
+				return NULL;
+			}
 		}
 	}
 	return possibleMoves;
@@ -264,7 +266,8 @@ static struct LinkedList* getPawnMoves(char** board, int fromX, int fromY){
  * Adds a single possible move from (fromX, fromY) to (fromX+sideward, fromY+forward) if 
  * this move is legal.
  *
- * @return: -1 if the given position is occupied or out of range, 0 otherwise
+ * @return: -1 if the given position is occupied or out of range, 
+ *           0 otherwise
  */
 
 int addMoveIfLegal(struct LinkedList* possibleMoves, char** board, 
@@ -278,8 +281,8 @@ int addMoveIfLegal(struct LinkedList* possibleMoves, char** board,
 	if (Board_getColor(board, toX, toY) == player){
 		return -1;
 	}
-	assert(PossibleMoveList_add(possibleMoves, fromX, fromY, toX, toY, board) == 0);
-	if (Board_getColor(board, toX, toY) != player){
+	PossibleMoveList_add(possibleMoves, fromX, fromY, toX, toY, board); //Allocation error not handled
+	if (Board_getColor(board, toX, toY) == !player){
 		return -1;
 	}			
 	return 0;
