@@ -16,6 +16,14 @@ struct PossibleMove* PossibleMoveList_first(struct LinkedList* list){
 	return (struct PossibleMove*)LinkedList_first(list);
 }
 
+int PossibleMoveList_add(struct LinkedList* list, int fromX, int fromY, int toX, int toY, char** board){
+	struct PossibleMove* move = PossibleMove_new(fromX, fromY, toX, toY, board);
+	if (!move){
+		return -1;
+	}
+	return LinkedList_add(list, move);
+}
+
 /*
  * Prints the list.
  */

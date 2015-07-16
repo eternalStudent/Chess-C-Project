@@ -241,14 +241,6 @@ static int isEnemyPiece(char** board, int x, int y, int player){
 	return !Board_isEmpty(board, x, y) && Board_getColor(board, x, y) != player;
 }
 
-int PossibleMoveList_add(struct LinkedList* list, int fromX, int fromY, int toX, int toY, char** board){
-	struct PossibleMove* move = PossibleMove_new(fromX, fromY, toX, toY, board);
-	if (!move){
-		return -1;
-	}
-	return LinkedList_add(list, move);
-}
-
 static void populatePawnMoves(struct LinkedList* possibleMoves, char** board, int fromX, int fromY){
 	int player = Board_getColor(board, fromX, fromY);
 	int forward = player == WHITE? 1: -1;
