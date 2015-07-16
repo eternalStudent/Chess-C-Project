@@ -205,6 +205,9 @@ int Board_evalPiece(char** board, int x, int y, int player){
  * @return: -1 if the position is empty, the color of the piece otherwise
  */
 static int Board_getColor(char** board, int x, int y){
+	if (Board_isEmpty(board, x, y)){
+		return -1;
+	}
 	char piece = Board_getPiece(board, x, y);
 	return piece == toupper(piece)? BLACK: WHITE;
 }
@@ -237,10 +240,6 @@ int Board_getScore(char** board, int player){
 	return score;
 }
 
-static int Board_isEnemyPiece(char** board, int x, int y, int player){
-	return !Board_isEmpty(board, x, y) && Board_getColor(board, x, y) != player;
-}
-
 static void populatePawnMoves(struct LinkedList* possibleMoves, char** board, 
 			int fromX, int fromY){
 	int player = Board_getColor(board, fromX, fromY);
@@ -253,7 +252,7 @@ static void populatePawnMoves(struct LinkedList* possibleMoves, char** board,
 		}
 		
 		int canMoveForward = Board_isEmpty(board, toX, toY) && sideward == 0;
-		int canCapture = Board_isEnemyPiece(board, toX, toY, player);
+		int canCapture = Board_getColor(board, x, y) != player;
 		if (canMoveForward || canCapture){
 			assert(PossibleMoveList_add(possibleMoves, fromX, fromY, toX, toY, board) == 0);
 		}
@@ -272,11 +271,14 @@ int addMoveIfLegal(struct LinkedList* possibleMoves, char** board,
 	int player = Board_getColor(board, fromX, fromY);
 	int toX = fromX+sideward;
 	int toY = fromY+forward;
-	if (!Board_isInRange(toX, toY) || Board_getColor(board, toX, toY) == player){
+	if (!Board_isInRange(toX, toY)){
+		return -1;
+	}
+	if (Board_getColor(board, toX, toY) == player){
 		return -1;
 	}
 	assert(PossibleMoveList_add(possibleMoves, fromX, fromY, toX, toY, board) == 0);
-	if (Board_isEnemyPiece(board, toX, toY, player)){
+	if (Board_getColor(board, x, y) != player){
 		return -1;
 	}			
 	return 0;
@@ -321,6 +323,30 @@ static void populateQueenMoves(struct LinkedList* possibleMoves, char** board,
 	populateRookMoves  (possibleMoves, board, fromX, fromY);
 }
 
+static void populateKingMoves(struct LinkedList* possibleMoves, char** board,
+			int fromX, int fromY){
+	int player = Board_getColor(board, fromX, fromY);
+	for (int sideward = -1; sideward <= 1; sideward++){
+		for (int forward = -1; forward <= 1; forward++){
+			addMoveIfLegal(possibleMoves, board, fromX, fromY, sideward, forward);
+		}
+	}
+}
+
+static void populateKnightMoves(struct LinkedList* possibleMoves, char** board,
+			int fromX, int fromY){
+	int player = Board_getColor(board, fromX, fromY);
+	for (int sideward = -1; sideward <= 1; sideward += 2){
+		for (int forward = -2; forward <= 2; forward += 4){
+			addMoveIfLegal(possibleMoves, board, fromX, fromY, sideward, forward);
+		}
+	}
+	for (int sideward = -2; sideward <= 2; sideward += 4){
+		for (int forward = -1; forward <= 1; forward += 2){
+			addMoveIfLegal(possibleMoves, board, fromX, fromY, sideward, forward);
+		}
+	}
+}	
 
 /*
  * Main function for getting all of the moves currently possible for a player. 
@@ -345,6 +371,10 @@ struct LinkedList* Board_getPossibleMoves(char** board, int player){
 				case Board_WHITE_ROOK:   populateRookMoves  (possibleMoves, board, x, y); break;
 				case Board_BLACK_QUEEN:
 				case Board_WHITE_QUEEN:  populateQueenMoves (possibleMoves, board, x, y); break;
+				case Board_BLACK_KNIGHT:
+				case Board_WHITE_KNIGHT: populateKnightMoves(possibleMoves, board, x, y); break;
+				case Board_BLACK_KING:
+				case Board_WHITE_KING:   populateKingMoves  (possibleMoves, board, x, y); break;
 			}
 		}
 	}
