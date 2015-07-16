@@ -190,7 +190,20 @@ char** Board_getPossibleBoard(char** board, struct PossibleMove* possibleMove){
 int Board_evalPiece(char** board, int x, int y, int player){
 	char piece = Board_getPiece(board, x, y);
 	int value = 0;
-	//TODO: complete
+	switch (piece){
+		case Board_BLACK_PAWN:   value = -1;   break;
+		case Board_WHITE_PAWN:   value =  1;   break;
+		case Board_BLACK_BISHOP: value = -3;   break;
+		case Board_WHITE_BISHOP: value =  3;   break;
+		case Board_BLACK_ROOK:   value = -5;   break;
+		case Board_WHITE_ROOK:   value =  5;   break;
+		case Board_BLACK_QUEEN:  value = -9;   break;
+		case Board_WHITE_QUEEN:  value =  9;   break;
+		case Board_BLACK_KNIGHT: value = -3;   break;
+		case Board_WHITE_KNIGHT: value =  3;   break;
+		case Board_BLACK_KING:	 value = -400; break;
+		case Board_WHITE_KING:   value =  400; break;
+	}
 	if (player == BLACK){
 		return -value;
 	}
@@ -218,24 +231,11 @@ static int Board_getColor(char** board, int x, int y){
  */
 int Board_getScore(char** board, int player){
 	int score = 0;
-	int hasMoves = 0;
-	int opponentHasMoves = 0;
 	for (int x = 1; x <= Board_SIZE; x++){
 		for (int y = 1; y <= Board_SIZE; y++){
-			int value = Board_evalPiece(board, x, y, player);
-			if (value == 0){
-				continue;
-			}
-			//TODO: complete
-			score += value;
+			score += Board_evalPiece(board, x, y, player);
 		}
 	}
-	if (!hasMoves){
-		return -400;
-	}	
-	if (!opponentHasMoves){
-		return 400;
-	}	
 	return score;
 }
 
