@@ -2,7 +2,7 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
-#include <regex.h>
+#include <ctype.h>
 
 #define SETTINGS 0
 #define GAME     1
@@ -64,7 +64,100 @@ void freeAndExit(){
 	exit(0);
 }
 
-//TODO: add setting functions
+int readTile(int* x, int* y){
+	char str[64];
+	char ch;
+	scanf("%s", str);
+	if (sscanf(str, "<%c,%d>", &ch, y) < 0){
+		return -1;
+	}
+	*x = ch-96;
+	printf("%s %c %d %d\n", str, ch, *x, *y);
+	return 0;
+}
+
+int stringToColor(char* str){
+	if (strcmp(str, "black")){
+		return BLACK;
+	}
+	if (strcmp(str, "white")){
+		return WHITE;
+	}
+	return -1;
+}
+
+char stringToPiece(char* str, int color){
+	char piece = 0;
+	if (strcmp(str, "pawn")){
+		piece = Board_WHITE_PAWN;
+	}
+	if (strcmp(str, "bishop")){
+		piece = Board_WHITE_BISHOP;
+	}
+	if (strcmp(str, "rook")){
+		piece = Board_WHITE_ROOK;
+	}
+	if (strcmp(str, "knight")){
+		piece = Board_WHITE_KNIGHT;
+	}
+	if (strcmp(str, "queen")){
+		piece = Board_WHITE_QUEEN;
+	}
+	if (strcmp(str, "king")){
+		piece = Board_WHITE_KING;
+	}
+	if (color == BLACK){
+		piece = toupper(piece);
+	}
+	return piece;
+}
+
+int readPiece(){
+	char* colorString;
+	char* pieceString;
+	int color;
+	char piece;
+	if (scanf("%s %s", colorString, pieceString) < 0){
+		return -1;
+	}
+	color = stringToColor(colorString);
+	if (color == -1){
+		return -1;
+	}
+	piece = stringToPiece(pieceString, color);
+	if (piece == 0){
+		return -1;
+	}
+	return piece;
+}
+
+int removePiece(){
+	int x, y;
+	if (readTile(&x, &y) == -1){
+		return -1;
+	}
+	if (!Board_isInRange(x, y)){
+		return -2;
+	}
+	Board_removePiece(board, x, y);
+	return 0;
+}
+
+int setPiece(){
+	int x, y;
+	if (readPiece(&x, &y) == -1){
+		return -1;
+	}
+	if (!Board_isInRange(x, y)){
+		return -2;
+	}
+	char piece = readPiece();
+	if (piece == -1){
+		return -1;
+	}
+	Board_setPiece(board, x, y, piece);
+	return 0;
+}
 
 /* 
  * Performs a move on the board according to input from the user.
@@ -100,103 +193,6 @@ int updatePossibleMoves(){
 	return 0;
 }
 
-int readTile(int* x, int* y){
-	int ch;
-	if (scanf("<%d,%c>", x, &ch) < 0){
-		return -1;
-	}
-	*y = ch-96;
-	return 0;
-}
-
-int stringToColor(char* str){
-	if (strcmp(str, "black")){
-		return BLACK;
-	}
-	if (strcmp(str, "white")){
-		return WHITE;
-	}
-	return -1;
-}
-
-char stringToPiece(char* str, int color){
-	char piece = 0;
-	if (strcmp(str, "pawn")){
-		piece = 'm';
-	}
-	if (strcmp(str, "bishop")){
-		piece = 'b';
-	}
-	if (strcmp(str, "knight")){
-		piece = 'n';
-	}
-	if (strcmp(str, "queen")){
-		piece = 'q';
-	}
-	if (strcmp(str, "king")){
-		piece = 'k';
-	}
-	if (color == BLACK){
-		piece = toupper(piece);
-	}
-	return piece;
-}
-
-int readPiece(){
-	char* color;
-	char* pieceString;
-	char piece;
-	if (scanf("%s %s", color, pieceString) < 0){
-		return -1;
-	}
-	*color = stringToColor(colorString);
-	if (*color == -1){
-		return -1;
-	}
-	piece = stringToPiece(pieceString, color);
-	if (piece == 0){
-		return -1;
-	}
-	return piece;
-}
-
-int removePiece(){
-	int x, y;
-	if (readTile(&x, &y) == -1){
-		return -1;
-	}
-	if (!Board_inRange(x, y)){
-		return -2;
-	}
-	Board_removePiece(x, y);
-	return 0;
-}
-
-int setPiece(){
-	int x, y;
-	if (readPiece(&x, &y) == -1){
-		return -1;
-	}
-	if (!Board_inRange(x, y)){
-		return -2;
-	}
-	char piece = readPiece();
-	if (piece == -1){
-		return -1;
-	}
-	Board_setPiece(x, y, piece);
-	return 0;
-}
-
-/*
- * @return: the first word of the command
- */
-char* readCommand(){
-	char* command;
-	scanf("%s", command);
-	return command;
-}
-
 /*
  * Executes a command given by the user
  *
@@ -205,31 +201,33 @@ char* readCommand(){
  */
 int executeCommand(char* command){
 	if (strcmp(command, "game_mode") == 0){
-		return setGameMode();
+		//return setGameMode();
 	}
 	if (strcmp(command, "difficulty") == 0){
-		return setDifficulty();
+		//return setDifficulty();
 	}
 	if (strcmp(command, "user_color") == 0){
-		return setUserColor();
+		//return setUserColor();
 	}
 	if (strcmp(command, "load") == 0){
-		return loadGame();
+		//return loadGame();
 	}
 	if (strcmp(command, "clear") == 0){
-		return Board_clear(board);
+		Board_clear(board);
+		return 0;
 	}
 	if (strcmp(command, "next_player") == 0){
-		return setPlayFirst();
+		//return setPlayFirst();
 	}
 	if (strcmp(command, "rm") == 0){
+		
 		return removePiece();
 	}
 	if (strcmp(command, "set") == 0){
 		return setPiece();
 	}
 	if (strcmp(command, "print") == 0){
-		Board_print();
+		Board_print(board);
 		return 0;
 	}
 	if (strcmp(command, "quit") == 0){
@@ -245,7 +243,11 @@ int executeCommand(char* command){
  * @params: (error) - the exitcode of the error
  */
 void printError(int error){
-	
+	switch (error){
+		case  0: break;
+		case -1: printf("Illegal command, please try again\n"); break;
+		case -2: printf("Invalid position on the board\n"); break;
+	}
 }
 
 /*
@@ -311,12 +313,13 @@ void computerTurn(){
 /*
  * The human turn procedure
  */
-void humanTurn(){	
+void humanTurn(){
 	while (turn == human){
 		if (state == GAME){
 			printf("Enter your move:\n");
 		}
-		char* command = readCommand(command);
+		char command[64];
+		scanf("%63s", command);
 		int error = executeCommand(command);
 		printError(error);
 	}
@@ -324,7 +327,8 @@ void humanTurn(){
 
 int main(){
 	initialize();
-	
+	Board_print(board);
+	printf("Enter game settings:\n");
 	int gameOver = 0;
 	while (!gameOver){
 		if (turn == human){

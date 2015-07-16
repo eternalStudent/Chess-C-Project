@@ -4,7 +4,7 @@ struct PossibleMove{
 	char** board;
 };
 
-struct PossibleMove* PossibleMove_new(int, int, struct LinkedList*, char**);
+struct PossibleMove* PossibleMove_new(int, int, int, int, char**);
 
 int PossibleMove_equals(struct PossibleMove* this, struct PossibleMove* other);
 

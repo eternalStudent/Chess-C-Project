@@ -1,4 +1,5 @@
 #include <stdio.h>
+#include <ctype.h>
 #include "Board.h"
 
 /*
@@ -22,7 +23,31 @@ char** Board_new(){
  * Populates the board in the standard way.
  */
 void Board_init(char** board){
-	//TODO: complete
+	for (int x = 1; x <= Board_SIZE; x++){
+		Board_setPiece(board, x, 2, Board_WHITE_PAWN);
+		Board_setPiece(board, x, 7, Board_BLACK_PAWN);
+	}
+	Board_setPiece(board, 1, 1, Board_WHITE_ROOK);
+	Board_setPiece(board, 2, 1, Board_WHITE_KNIGHT);
+	Board_setPiece(board, 3, 1, Board_WHITE_BISHOP);
+	Board_setPiece(board, 4, 1, Board_WHITE_KING);
+	Board_setPiece(board, 5, 1, Board_WHITE_QUEEN);
+	Board_setPiece(board, 6, 1, Board_WHITE_BISHOP);
+	Board_setPiece(board, 7, 1, Board_WHITE_KNIGHT);
+	Board_setPiece(board, 8, 1, Board_WHITE_ROOK);
+	Board_setPiece(board, 1, 8, Board_BLACK_ROOK);
+	Board_setPiece(board, 2, 8, Board_BLACK_KNIGHT);
+	Board_setPiece(board, 3, 8, Board_BLACK_BISHOP);
+	Board_setPiece(board, 4, 8, Board_BLACK_KING);
+	Board_setPiece(board, 5, 8, Board_BLACK_QUEEN);
+	Board_setPiece(board, 6, 8, Board_BLACK_BISHOP);
+	Board_setPiece(board, 7, 8, Board_BLACK_KNIGHT);
+	Board_setPiece(board, 8, 8, Board_BLACK_ROOK);
+	for (int x = 1; x <= Board_SIZE; x++){
+		for (int y = 3; y <= 6; y++){
+			Board_setPiece(board, x, y, Board_EMPTY);
+		}
+	}
 }
 
 /*
@@ -218,7 +243,7 @@ int Board_getScore(char** board, int player){
  * @return: a list of all moves currently possible for the player, or NULL if any allocation errors occurred 
  */
 struct LinkedList* Board_getPossibleMoves(char** board, int player){
-	struct LinkedList* possibleMoves = LinkedList_new();
+	struct LinkedList* possibleMoves = LinkedList_new(&PossibleMove_free);
 	//TODO: complete
 	return possibleMoves;
 }	

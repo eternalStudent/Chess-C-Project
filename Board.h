@@ -36,7 +36,7 @@ char Board_remove    (char** board, int x, int y);
 
 int  Board_isEmpty   (char** board, int x, int y);
 
-int  Board_isInRange (char** board, int x, int y);
+int  Board_isInRange (int x, int y);
 
 int  Board_isPlayable(char** board);
 
