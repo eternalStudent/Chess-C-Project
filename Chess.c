@@ -7,6 +7,8 @@
 #define SETTINGS 0
 #define GAME     1
 #define UNDEFINED 101
+#define str_equals(x, y) strcmp(x, y) == 0
+#define toBlack(x) toupper(x)
 
 char** board;
 int human;
@@ -72,15 +74,14 @@ int readTile(int* x, int* y){
 		return -1;
 	}
 	*x = ch-96;
-	printf("%s %c %d %d\n", str, ch, *x, *y);
 	return 0;
 }
 
 int stringToColor(char* str){
-	if (strcmp(str, "black")){
+	if (str_equals(str, "black")){
 		return BLACK;
 	}
-	if (strcmp(str, "white")){
+	if (str_equals(str, "white")){
 		return WHITE;
 	}
 	return -1;
@@ -88,36 +89,36 @@ int stringToColor(char* str){
 
 char stringToPiece(char* str, int color){
 	char piece = 0;
-	if (strcmp(str, "pawn")){
+	if (str_equals(str, "pawn")){
 		piece = Board_WHITE_PAWN;
 	}
-	if (strcmp(str, "bishop")){
+	if (str_equals(str, "bishop")){
 		piece = Board_WHITE_BISHOP;
 	}
-	if (strcmp(str, "rook")){
+	if (str_equals(str, "rook")){
 		piece = Board_WHITE_ROOK;
 	}
-	if (strcmp(str, "knight")){
+	if (str_equals(str, "knight")){
 		piece = Board_WHITE_KNIGHT;
 	}
-	if (strcmp(str, "queen")){
+	if (str_equals(str, "queen")){
 		piece = Board_WHITE_QUEEN;
 	}
-	if (strcmp(str, "king")){
+	if (str_equals(str, "king")){
 		piece = Board_WHITE_KING;
 	}
 	if (color == BLACK){
-		piece = toupper(piece);
+		piece = toBlack(piece);
 	}
 	return piece;
 }
 
 int readPiece(){
-	char* colorString;
-	char* pieceString;
+	char colorString[6];
+	char pieceString[7];
 	int color;
 	char piece;
-	if (scanf("%s %s", colorString, pieceString) < 0){
+	if (scanf("%6s %7s", colorString, pieceString) < 0){
 		return -1;
 	}
 	color = stringToColor(colorString);
@@ -145,7 +146,7 @@ int removePiece(){
 
 int setPiece(){
 	int x, y;
-	if (readPiece(&x, &y) == -1){
+	if (readTile(&x, &y) == -1){
 		return -1;
 	}
 	if (!Board_isInRange(x, y)){
@@ -200,40 +201,40 @@ int updatePossibleMoves(){
  * @return: relevant exitcode
  */
 int executeCommand(char* command){
-	if (strcmp(command, "game_mode") == 0){
+	if (str_equals(command, "game_mode")){
 		//return setGameMode();
 	}
-	if (strcmp(command, "difficulty") == 0){
+	if (str_equals(command, "difficulty")){
 		//return setDifficulty();
 	}
-	if (strcmp(command, "user_color") == 0){
+	if (str_equals(command, "user_color")){
 		//return setUserColor();
 	}
-	if (strcmp(command, "load") == 0){
+	if (str_equals(command, "load")){
 		//return loadGame();
 	}
-	if (strcmp(command, "clear") == 0){
+	if (str_equals(command, "clear")){
 		Board_clear(board);
 		return 0;
 	}
-	if (strcmp(command, "next_player") == 0){
+	if (str_equals(command, "next_player")){
 		//return setPlayFirst();
 	}
-	if (strcmp(command, "rm") == 0){
-		
+	if (str_equals(command, "rm")){
 		return removePiece();
 	}
-	if (strcmp(command, "set") == 0){
+	if (str_equals(command, "set")){
 		return setPiece();
 	}
-	if (strcmp(command, "print") == 0){
+	if (str_equals(command, "print")){
 		Board_print(board);
 		return 0;
 	}
-	if (strcmp(command, "quit") == 0){
+	if (str_equals(command, "quit")){
 		freeAndExit();
+		return 0;
 	}
-	scanf("\n");
+	scanf("\n"); //meant to go to the end of the line, not working though
 	return -1;
 }
 
