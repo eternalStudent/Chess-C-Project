@@ -1,8 +1,11 @@
-#include "PossibleMove.c"
+#include "Iterator.c"
+#include "PossibleMove.h"
 
 struct LinkedList* PossibleMoveList_new();
 
 struct PossibleMove* PossibleMoveList_first(struct LinkedList* list);
+
+int PossibleMoveList_add(struct LinkedList*, int, int, int, int, char**);
 
 void PossibleMoveList_print(struct LinkedList* list);
 

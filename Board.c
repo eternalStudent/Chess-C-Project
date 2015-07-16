@@ -1,5 +1,6 @@
 #include <stdio.h>
 #include <ctype.h>
+#include <assert.h>
 #include "Board.h"
 
 /*
@@ -236,6 +237,51 @@ int Board_getScore(char** board, int player){
 	return score;
 }
 
+static int isEnemyPiece(char** board, int x, int y, int player){
+	return !Board_isEmpty(board, x, y) && Board_getColor(board, x, y) != player;
+}
+
+int PossibleMoveList_add(struct LinkedList* list, int fromX, int fromY, int toX, int toY, char** board){
+	struct PossibleMove* move = PossibleMove_new(fromX, fromY, toX, toY, board);
+	if (!move){
+		return -1;
+	}
+	return LinkedList_add(list, move);
+}
+
+static void populatePawnMoves(struct LinkedList* possibleMoves, char** board, int fromX, int fromY){
+	int player = Board_getColor(board, fromX, fromY);
+	int forward = player == WHITE? 1: -1;
+	for (int sideward = -1; sideward <= 1; sideward++){
+		int toX = fromX+sideward;
+		int toY = fromY+forward;
+		if (!Board_isInRange(toX, toY)){
+			continue;
+		}
+		
+		int canMoveForward = Board_isEmpty(board, toX, toY) && sideward == 0;
+		int canCapture = isEnemyPiece(board, toX, toY, player);
+		if (canMoveForward || canCapture){
+			assert(PossibleMoveList_add(possibleMoves, fromX, fromY, toX, toY, board) == 0);
+		}
+	}
+}
+
+static void populateBishopMoves(struct LinkedList* possibleMoves, char** board, int fromX, int fromY){
+	for (int sideward = -1; sideward <= 1; sideward += 2){
+		for (int forward = -1; forward <= 1; forward += 2){
+			for (int dist = 1; dist <= Board_SIZE; dist++){
+				int toX = fromX+dist*sideward;
+				int toY = fromY+dist*forward;
+				if (!Board_isInRange(toX, toY) || !Board_isEmpty(board, toX, toY)){
+					break;		
+				}
+				assert(PossibleMoveList_add(possibleMoves, fromX, fromY, toX, toY, board) == 0);
+			}
+		}
+	}
+}	
+
 /*
  * Main function for getting all of the moves currently possible for a player. 
  *
@@ -243,8 +289,19 @@ int Board_getScore(char** board, int player){
  * @return: a list of all moves currently possible for the player, or NULL if any allocation errors occurred 
  */
 struct LinkedList* Board_getPossibleMoves(char** board, int player){
-	struct LinkedList* possibleMoves = LinkedList_new(&PossibleMove_free);
-	//TODO: complete
+	struct LinkedList* possibleMoves = PossibleMoveList_new();
+	for (int x = 1; x <= Board_SIZE; x++){
+		for (int y = 1; y <= Board_SIZE; y++){
+			if (Board_isEmpty(board, x, y) || Board_getColor(board, x, y) != player){
+				continue;
+			}
+			char piece = Board_getPiece(board, x, y);
+			switch (piece){
+				case Board_BLACK_PAWN:
+				case Board_WHITE_PAWN: populatePawnMoves(possibleMoves, board, x, y); break;
+			}
+		}
+	}
 	return possibleMoves;
 }	
 
@@ -263,6 +320,7 @@ static void printLine(){
  * Prints an ASCII representation of the board.
  */
 void Board_print(char** board){
+
 	printLine();
 	for (int y = Board_SIZE-1; y >= 0 ; y--){
 		printf((y < 9? " %d": "%d"), y+1);

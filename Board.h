@@ -1,5 +1,4 @@
-#include "Iterator.c"
-#include "PossibleMove.h"
+#include "PossibleMoveList.c"
 
 #define Board_WHITE_PAWN   'm'
 #define Board_WHITE_BISHOP 'b'
