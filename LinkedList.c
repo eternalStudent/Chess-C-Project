@@ -59,6 +59,11 @@ int LinkedList_add(struct LinkedList* list, void* data){
 	return 0;
 }
 
+void LinkedList_concatenate(struct LinkedList* this, struct LinkedList* other){
+	this->last->next = other->first;
+	free(other);
+}
+
 /* 
  * @return: the number of elements in the list
  */

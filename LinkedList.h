@@ -14,6 +14,8 @@ struct LinkedList* LinkedList_new(void(*freeFunc)(void*));
 
 int LinkedList_add(struct LinkedList* list, void* data);
 
+void LinkedList_concatenate(struct LinkedList* this, struct LinkedList* other);
+
 int LinkedList_length(struct LinkedList* list);
 
 void* LinkedList_first(struct LinkedList* list);

@@ -33,7 +33,6 @@ void PossibleMoveList_print(struct LinkedList* list){
 	while(Iterator_hasNext(&iterator)){
 		struct PossibleMove* move = (struct PossibleMove*)Iterator_next(&iterator);
 		PossibleMove_print(move);
-		printf("\n");
 	}
 }
 

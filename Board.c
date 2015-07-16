@@ -240,8 +240,8 @@ int Board_getScore(char** board, int player){
 	return score;
 }
 
-static void populatePawnMoves(struct LinkedList* possibleMoves, char** board, 
-			int fromX, int fromY){
+static struct LinkedList* getPawnMoves(char** board, int fromX, int fromY){
+	struct LinkedList* possibleMoves = PossibleMoveList_new();;
 	int player = Board_getColor(board, fromX, fromY);
 	int forward = player == WHITE? 1: -1;
 	for (int sideward = -1; sideward <= 1; sideward++){
@@ -252,11 +252,12 @@ static void populatePawnMoves(struct LinkedList* possibleMoves, char** board,
 		}
 		
 		int canMoveForward = Board_isEmpty(board, toX, toY) && sideward == 0;
-		int canCapture = Board_getColor(board, x, y) != player;
+		int canCapture = Board_getColor(board, toX, toY) != player;
 		if (canMoveForward || canCapture){
 			assert(PossibleMoveList_add(possibleMoves, fromX, fromY, toX, toY, board) == 0);
 		}
 	}
+	return possibleMoves;
 }
 
 /*
@@ -278,14 +279,14 @@ int addMoveIfLegal(struct LinkedList* possibleMoves, char** board,
 		return -1;
 	}
 	assert(PossibleMoveList_add(possibleMoves, fromX, fromY, toX, toY, board) == 0);
-	if (Board_getColor(board, x, y) != player){
+	if (Board_getColor(board, toX, toY) != player){
 		return -1;
 	}			
 	return 0;
 }
 
-static void populateBishopMoves(struct LinkedList* possibleMoves, char** board, 
-			int fromX, int fromY){
+static struct LinkedList* getBishopMoves(char** board, int fromX, int fromY){
+	struct LinkedList* possibleMoves = PossibleMoveList_new();
 	for (int sideward = -1; sideward <= 1; sideward += 2){
 		for (int forward = -1; forward <= 1; forward += 2){
 			for (int dist = 1; dist <= Board_SIZE; dist++){
@@ -296,9 +297,11 @@ static void populateBishopMoves(struct LinkedList* possibleMoves, char** board,
 			}
 		}
 	}
+	return possibleMoves;
 }
 
-static void populateRookMoves(struct LinkedList* possibleMoves, char** board, int fromX, int fromY){
+static struct LinkedList* getRookMoves(char** board, int fromX, int fromY){
+	struct LinkedList* possibleMoves = PossibleMoveList_new();; 
 	for (int sideward = -1; sideward <= 1; sideward += 2){
 		for (int dist = 1; dist <= Board_SIZE; dist++){
 			int cantMoveFurther = addMoveIfLegal(possibleMoves, board, fromX, fromY, sideward*dist, 0);
@@ -315,26 +318,31 @@ static void populateRookMoves(struct LinkedList* possibleMoves, char** board, in
 			}
 		}
 	}
+	return possibleMoves;
 }
 
-static void populateQueenMoves(struct LinkedList* possibleMoves, char** board, 
-			int fromX, int fromY){
-	populateBishopMoves(possibleMoves, board, fromX, fromY);
-	populateRookMoves  (possibleMoves, board, fromX, fromY);
+static struct LinkedList* getQueenMoves(char** board, int fromX, int fromY){
+	struct LinkedList* possibleMoves1;
+	struct LinkedList* possibleMoves2;
+	possibleMoves1 = getBishopMoves(board, fromX, fromY);
+	possibleMoves2 = getRookMoves  (board, fromX, fromY);
+	LinkedList_concatenate(possibleMoves1, possibleMoves2);
+	return possibleMoves1;
 }
 
-static void populateKingMoves(struct LinkedList* possibleMoves, char** board,
-			int fromX, int fromY){
+static struct LinkedList* getKingMoves(char** board, int fromX, int fromY){
+	struct LinkedList* possibleMoves = PossibleMoveList_new();
 	int player = Board_getColor(board, fromX, fromY);
 	for (int sideward = -1; sideward <= 1; sideward++){
 		for (int forward = -1; forward <= 1; forward++){
 			addMoveIfLegal(possibleMoves, board, fromX, fromY, sideward, forward);
 		}
 	}
+	return possibleMoves;
 }
 
-static void populateKnightMoves(struct LinkedList* possibleMoves, char** board,
-			int fromX, int fromY){
+static struct LinkedList* getKnightMoves(char** board, int fromX, int fromY){
+	struct LinkedList* possibleMoves = PossibleMoveList_new();
 	int player = Board_getColor(board, fromX, fromY);
 	for (int sideward = -1; sideward <= 1; sideward += 2){
 		for (int forward = -2; forward <= 2; forward += 4){
@@ -346,7 +354,27 @@ static void populateKnightMoves(struct LinkedList* possibleMoves, char** board,
 			addMoveIfLegal(possibleMoves, board, fromX, fromY, sideward, forward);
 		}
 	}
-}	
+	return possibleMoves;
+}
+
+struct LinkedList* Board_getPossibleMovesOfPiece(char** board, int x, int y){
+	char piece = Board_getPiece(board, x, y);
+	switch (piece){
+		case Board_BLACK_PAWN:
+		case Board_WHITE_PAWN:   return getPawnMoves  (board, x, y);
+		case Board_BLACK_BISHOP:
+		case Board_WHITE_BISHOP: return getBishopMoves(board, x, y);
+		case Board_BLACK_ROOK:
+		case Board_WHITE_ROOK:   return getRookMoves  (board, x, y);
+		case Board_BLACK_QUEEN:
+		case Board_WHITE_QUEEN:  return getQueenMoves (board, x, y);
+		case Board_BLACK_KNIGHT:
+		case Board_WHITE_KNIGHT: return getKnightMoves(board, x, y);
+		case Board_BLACK_KING:
+		case Board_WHITE_KING:   return getKingMoves  (board, x, y);
+	}
+	return PossibleMoveList_new();
+}
 
 /*
  * Main function for getting all of the moves currently possible for a player. 
@@ -361,21 +389,7 @@ struct LinkedList* Board_getPossibleMoves(char** board, int player){
 			if (Board_isEmpty(board, x, y) || Board_getColor(board, x, y) != player){
 				continue;
 			}
-			char piece = Board_getPiece(board, x, y);
-			switch (piece){
-				case Board_BLACK_PAWN:
-				case Board_WHITE_PAWN:   populatePawnMoves  (possibleMoves, board, x, y); break;
-				case Board_BLACK_BISHOP:
-				case Board_WHITE_BISHOP: populateBishopMoves(possibleMoves, board, x, y); break;
-				case Board_BLACK_ROOK:
-				case Board_WHITE_ROOK:   populateRookMoves  (possibleMoves, board, x, y); break;
-				case Board_BLACK_QUEEN:
-				case Board_WHITE_QUEEN:  populateQueenMoves (possibleMoves, board, x, y); break;
-				case Board_BLACK_KNIGHT:
-				case Board_WHITE_KNIGHT: populateKnightMoves(possibleMoves, board, x, y); break;
-				case Board_BLACK_KING:
-				case Board_WHITE_KING:   populateKingMoves  (possibleMoves, board, x, y); break;
-			}
+			LinkedList_concatenate(possibleMoves, Board_getPossibleMovesOfPiece(board, x, y));
 		}
 	}
 	return possibleMoves;

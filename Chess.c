@@ -269,6 +269,16 @@ int updatePossibleMoves(){
 	return 0;
 }
 
+int printMovesOfPiece(){
+	int x, y;
+	if (readTile(&x, &y) == -1){
+		return -1;
+	}
+	struct LinkedList* possibleMoves = Board_getPossibleMovesOfPiece(board, x, y);
+	PossibleMoveList_print(possibleMoves);
+	return 0;
+}
+
 /*
  * Executes a command given by the user
  *
@@ -276,38 +286,50 @@ int updatePossibleMoves(){
  * @return: relevant exitcode
  */
 int executeCommand(char* command){
-	if (str_equals(command, "game_mode")){
-		return setGameMode();
-	}
-	if (str_equals(command, "difficulty")){
-		return setDifficulty();
-	}
-	if (str_equals(command, "user_color")){
-		return setUserColor();
-	}
-	if (str_equals(command, "load")){
-		//return loadGame();
-	}
-	if (str_equals(command, "clear")){
-		Board_clear(board);
-		return 0;
-	}
-	if (str_equals(command, "next_player")){
-		return setFirstPlayer();
-	}
-	if (str_equals(command, "rm")){
-		return removePiece();
-	}
-	if (str_equals(command, "set")){
-		return setPiece();
-	}
-	if (str_equals(command, "print")){
-		Board_print(board);
-		return 0;
-	}
 	if (str_equals(command, "quit")){
 		freeAndExit();
 		return 0;
+	}	
+	if (state == SETTINGS){
+		if (str_equals(command, "game_mode")){
+			return setGameMode();
+		}
+		if (str_equals(command, "difficulty")){
+			return setDifficulty();
+		}
+		if (str_equals(command, "user_color")){
+			return setUserColor();
+		}
+		if (str_equals(command, "load")){
+			//return loadGame();
+		}
+		if (str_equals(command, "clear")){
+			Board_clear(board);
+			return 0;
+		}
+		if (str_equals(command, "next_player")){
+			return setFirstPlayer();
+		}
+		if (str_equals(command, "rm")){
+			return removePiece();
+		}
+		if (str_equals(command, "set")){
+			return setPiece();
+		}
+		if (str_equals(command, "print")){
+			Board_print(board);
+			return 0;
+		}
+		if (str_equals(command, "start")){
+			turn = first;
+			state = GAME;
+			return 0;
+		}
+	}
+	else{
+		if (str_equals(command, "get_moves")){
+			return printMovesOfPiece();
+		}
 	}
 	scanf("\n"); //meant to go to the end of the line, not working though
 	return -1;
@@ -391,10 +413,11 @@ void computerTurn(){
 /*
  * The human turn procedure
  */
-void humanTurn(){
-	while (turn == player1){
+void humanTurn(int player){
+	while (turn == player){
 		if (state == GAME){
-			printf("Enter your move:\n");
+			printf(player == BLACK? "Black": "White");
+			printf(" player - enter your move:\n");
 		}
 		char command[64];
 		scanf("%63s", command);
@@ -409,14 +432,9 @@ int main(){
 	printf("Enter game settings:\n");
 	int gameOver = 0;
 	while (!gameOver){
-		if (turn == player1){
-			humanTurn();
-		}
-		else{
-			computerTurn();	
-		}
+		humanTurn(turn);
 		
-		gameOver = (Board_getScore(board, turn) == -100);
+		gameOver = (Board_getScore(board, turn) == -400);
 	}
 	printf("%s player wins!\n", (turn == BLACK)? "White" : "Black");
 	freeGlobals();

@@ -41,7 +41,7 @@ int PossibleMove_equals(struct PossibleMove* this, struct PossibleMove* other){
  * Prints the structure in the format: "move <x,y> to <i,j>[<k,l>...]".
  */
 void PossibleMove_print(struct PossibleMove* move){
-	printf("move <%d,%c> to <%d,%c>", move->fromX, move->fromY+96, move->toX, move->fromY+96);
+	printf("move <%c,%d> to <%c,%d>", move->fromX+96, move->fromY, move->toX+96, move->fromY);
 	switch(move->promotion){
 		case 'b': printf("bishop\n"); break;
 		case 'r': printf("rook\n"); break;
