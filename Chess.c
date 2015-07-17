@@ -18,6 +18,7 @@ int state;
 int gameMode;
 int turn;
 int first;
+int check[2];
 
 
 /*
@@ -36,6 +37,8 @@ void initialize(){
 	turn = player1;
 	first = WHITE;
 	gameMode = 1;
+	check[BLACK] == 0;
+	check[WHITE] == 0;
 }
 
 /*
@@ -242,21 +245,26 @@ int printMovesOfPiece(){
 	if (readTile(&x, &y) == -1){
 		return -1;
 	}
-	struct LinkedList* possibleMoves = Board_getPossibleMovesOfPiece(board, x, y);
+	struct LinkedList* possibleMoves = Board_getPossibleMovesOfPiece(board, x, y, check);
 	PossibleMoveList_print(possibleMoves);
 	PossibleMoveList_free(possibleMoves);
 	return 0;
 }
 
-int isCheck(int x, int y){
-	struct LinkedList* possibleMoves = Board_getPossibleMovesOfPiece(board, x, y); //Allocation error not handled
+int checkForCheck(int x, int y){
+	struct LinkedList* possibleMoves = Board_getPossibleMovesOfPiece(board, x, y, check);
+	if (!possibleMoves){
+		return 1;
+	}
 	struct Iterator iterator;
 	Iterator_init(&iterator, possibleMoves);
 	while(Iterator_hasNext(&iterator)){
 		struct PossibleMove* move = (struct PossibleMove*)Iterator_next(&iterator);
 		char piece = Board_getPiece(board, move->toX, move->toY);
 		if (toBlack(piece) == Board_BLACK_KING){
-			return 1;
+			check[turn] = 1;
+			printf("Check!\n");
+			return 0;
 		}
 	}
 	return 0;
@@ -282,8 +290,9 @@ int movePiece(){
 		return 1;
 	}
 	
-	struct LinkedList* possibleMoves = Board_getPossibleMovesOfPiece(board, fromX, fromY);
+	struct LinkedList* possibleMoves = Board_getPossibleMovesOfPiece(board, fromX, fromY, check);
 	if (!possibleMoves){
+		PossibleMove_free(move);
 		return 1;
 	}
 	
@@ -293,13 +302,11 @@ int movePiece(){
 	
 	Board_update(board, move);
 	Board_print(board);
-	if (isCheck(toX, toY)){
-		printf("Check!\n");
-	}
+	check[turn] = 0;
 	turn = !turn;
 	PossibleMove_free(move);
 	PossibleMoveList_free(possibleMoves);
-	return 0;
+	return checkForCheck(toX, toY);
 }
 
 /*
@@ -387,7 +394,7 @@ struct PossibleMove* minimax(struct PossibleMove* possibleMove, int depth, int p
 		return possibleMove;
 	}
 	char** board = possibleMove->board;
-	struct LinkedList* possibleMoves = Board_getPossibleMoves(board, player);
+	struct LinkedList* possibleMoves = Board_getPossibleMoves(board, player, check);
 	if (LinkedList_length(possibleMoves) == 0){
 		LinkedList_free(possibleMoves);
 		return possibleMove;

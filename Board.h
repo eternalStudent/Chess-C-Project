@@ -47,7 +47,7 @@ int  Board_evalPiece (char** board, int x, int y, int color);
 
 int  Board_getScore  (char** board, int color);
 
-struct LinkedList* Board_getPossibleMoves(char** board, int player);
+struct LinkedList* Board_getPossibleMoves(char** board, int player, int check[2]);
 
 void Board_print     (char** board);
 
