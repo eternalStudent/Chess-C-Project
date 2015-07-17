@@ -468,8 +468,10 @@ int main(){
 	int gameOver = 0;
 	while (!gameOver){
 		humanTurn(turn);
+		struct LinkedList* possibleMoves = Board_getPossibleMoves(board, turn, check);
+		gameOver = LinkedList_length(possibleMoves) == 0;
 	}
-	printf("%s player wins!\n", (turn == BLACK)? "White" : "Black");
+	printf("Mate! %s player wins the game\n", (turn == BLACK)? "White" : "Black");
 	freeGlobals();
 	return 0;
 }
