@@ -292,7 +292,7 @@ static struct LinkedList* getBishopMoves(char** board, int fromX, int fromY){
 	struct LinkedList* possibleMoves = PossibleMoveList_new();
 	for (int sideward = -1; sideward <= 1; sideward += 2){
 		for (int forward = -1; forward <= 1; forward += 2){
-			for (int dist = 1; dist <= Board_SIZE; dist++){
+			for (int dist = 1; dist < Board_SIZE; dist++){
 				int cantMoveFurther = addMoveIfLegal(possibleMoves, board, fromX, fromY, dist*sideward, dist*forward);
 				if (cantMoveFurther){
 					break;
@@ -306,7 +306,7 @@ static struct LinkedList* getBishopMoves(char** board, int fromX, int fromY){
 static struct LinkedList* getRookMoves(char** board, int fromX, int fromY){
 	struct LinkedList* possibleMoves = PossibleMoveList_new();; 
 	for (int sideward = -1; sideward <= 1; sideward += 2){
-		for (int dist = 1; dist <= Board_SIZE; dist++){
+		for (int dist = 1; dist < Board_SIZE; dist++){
 			int cantMoveFurther = addMoveIfLegal(possibleMoves, board, fromX, fromY, sideward*dist, 0);
 			if (cantMoveFurther){
 				break;
@@ -314,7 +314,7 @@ static struct LinkedList* getRookMoves(char** board, int fromX, int fromY){
 		}
 	}
 	for (int forward = -1; forward <= 1; forward += 2){
-		for (int dist = 1; dist <= Board_SIZE; dist++){
+		for (int dist = 1; dist < Board_SIZE; dist++){
 			int cantMoveFurther = addMoveIfLegal(possibleMoves, board, fromX, fromY, 0, forward*dist);
 			if (cantMoveFurther){
 				break;

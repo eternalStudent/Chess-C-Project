@@ -73,6 +73,9 @@ int readTiles(int* fromX, int* fromY, int* toX, int* toY){
 	if (sscanf(str1, "<%c,%1d>", &ch1, fromY) < 0){
 		return -1;
 	}
+	if (!str_equals(str2, "to")){
+		return -1;
+	}
 	if (sscanf(str3, "<%c,%1d>", &ch2, toY) < 0){
 		return -1;
 	}
@@ -245,6 +248,20 @@ int printMovesOfPiece(){
 	return 0;
 }
 
+int isCheck(int x, int y){
+	struct LinkedList* possibleMoves = Board_getPossibleMovesOfPiece(board, x, y); //Allocation error not handled
+	struct Iterator iterator;
+	Iterator_init(&iterator, possibleMoves);
+	while(Iterator_hasNext(&iterator)){
+		struct PossibleMove* move = (struct PossibleMove*)Iterator_next(&iterator);
+		char piece = Board_getPiece(board, move->toX, move->toY);
+		if (toBlack(piece) == Board_BLACK_KING){
+			return 1;
+		}
+	}
+	return 0;
+}
+
 int movePiece(){
 	int fromX, fromY, toX, toY;
 	if (readTiles(&fromX, &fromY, &toX, &toY) == -1){
@@ -276,6 +293,9 @@ int movePiece(){
 	
 	Board_update(board, move);
 	Board_print(board);
+	if (isCheck(toX, toY)){
+		printf("Check!\n");
+	}
 	turn = !turn;
 	PossibleMove_free(move);
 	PossibleMoveList_free(possibleMoves);
