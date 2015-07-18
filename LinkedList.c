@@ -60,6 +60,13 @@ int LinkedList_add(struct LinkedList* list, void* data){
 }
 
 void LinkedList_concatenate(struct LinkedList* this, struct LinkedList* other){
+	if ((LinkedList_length(this) == 0) && (LinkedList_length(other) == 0)){ // both lists are empty
+		return;
+	}
+	
+	if ((LinkedList_length(this) == 0) && (LinkedList_length(other) != 0)){
+		LinkedList_concatenate(other,this);
+	}
 	this->last->next = other->first;
 	free(other);
 }
@@ -75,7 +82,7 @@ int LinkedList_length(struct LinkedList* list){
  * @return: the first element in the list
  */
 void* LinkedList_first(struct LinkedList* list){
-	return list->first->data;
+	return list->first->data;                                                                      
 }
 
 /* 

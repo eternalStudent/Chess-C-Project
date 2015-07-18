@@ -12,6 +12,7 @@
 #define toBlack(x) toupper(x)
 
 char** board;
+struct counterSet* pieceCounters;
 int player1;
 int maxRecursionDepth;
 int state;
@@ -30,6 +31,13 @@ void initialize(){
 		fprintf(stderr, "Error: standard function calloc has failed\n");
 		exit(0);
 	}
+	pieceCounters = newCounterSet();
+	if (!pieceCounters){
+		Board_free(board);
+		fprintf(stderr, "Error: standard function malloc has failed\n");
+		exit(0);
+	}
+
 	Board_init(board);
 	player1 = WHITE;
 	maxRecursionDepth = 1;
@@ -37,8 +45,8 @@ void initialize(){
 	turn = player1;
 	first = WHITE;
 	gameMode = 1;
-	check[BLACK] == 0;
-	check[WHITE] == 0;
+	check[BLACK] = 0;
+	check[WHITE] = 0;
 }
 
 /*
@@ -46,6 +54,7 @@ void initialize(){
  */
 void freeGlobals(){
 	Board_free(board);
+	free(pieceCounters);
 }
 
 /*
@@ -150,6 +159,7 @@ int removePiece(){
 	if (!Board_isInRange(x, y)){
 		return -2;
 	}
+	updatePieceCounter(pieceCounters, Board_getPiece(board, x, y), -1, x, y);
 	Board_removePiece(board, x, y);
 	return 0;
 }
@@ -166,8 +176,19 @@ int setPiece(){
 	if (piece == -1){
 		return -1;
 	}
-	Board_setPiece(board, x, y, piece);
-	return 0;
+	
+	if (canPieceBeAdded(pieceCounters,piece, x, y)){
+		if(!Board_isEmpty(board,x,y)){
+			updatePieceCounter(pieceCounters, Board_getPiece(board, x, y), -1, x, y);
+		}
+		Board_setPiece(board, x, y, piece);
+		updatePieceCounter(pieceCounters, piece, 1, x, y);
+		return 0;
+	}
+	
+	else{
+		return -8;
+	}	
 }
 
 int setGameMode(){
@@ -335,6 +356,7 @@ int executeCommand(char* command){
 		}
 		if (str_equals(command, "clear")){
 			Board_clear(board);
+			resetCounters(pieceCounters);
 			return 0;
 		}
 		if (str_equals(command, "next_player")){
@@ -351,9 +373,13 @@ int executeCommand(char* command){
 			return 0;
 		}
 		if (str_equals(command, "start")){
-			turn = first;
-			state = GAME;
-			return 0;
+			if(Board_isPlayable(board, pieceCounters)){
+				turn = first;
+				state = GAME;
+			}
+			else{
+				return -7;
+			}
 		}
 	}
 	else{
@@ -383,6 +409,8 @@ void printError(int error){
 		case -4: printf("Wrong value for minimax depth. The value should be between 1 to 4\n"); break;
 		case -5: printf("The specified position does not contain your piece\n"); break;
 		case -6: printf("Illegal move\n"); break;
+		case -7: printf("Wrong board initialization\n"); break;
+		case -8: printf("Setting this piece creates an invalid board\n"); break;
 	}
 }
 

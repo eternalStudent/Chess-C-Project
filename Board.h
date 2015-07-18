@@ -18,10 +18,35 @@
 #define BLACK 0
 #define WHITE 1
 
+struct counterSet{
+	int whitePawnCounter;
+	int blackPawnCounter;
+	int whiteBishopOnBlackTileCounter;
+	int whiteBishopOnWhiteTileCounter;
+	int blackBishopOnBlackTileCounter;
+	int blackBishopOnWhiteTileCounter;
+	int whiteRookCounter;
+	int blackRookCounter;
+	int whiteKnightCounter;
+	int blackKnightCounter;
+	int whiteQueenCounter;
+	int blackQueenCounter;
+	int whiteKingCounter;
+	int blackKingCounter;
+};
+
 
 char** Board_new();
 
 void Board_init      (char** board);
+
+struct counterSet* newCounterSet();
+
+int canPieceBeAdded(struct counterSet* pieceCounters, char piece, int x, int y);
+
+void updatePieceCounter(struct counterSet* pieceCounters, char piece, int amountToAdd, int x, int y);
+
+void resetCounters(struct counterSet* pieceCounters);
 
 void Board_clear     (char** board);
 
@@ -37,7 +62,7 @@ int  Board_isEmpty   (char** board, int x, int y);
 
 int  Board_isInRange (int x, int y);
 
-int  Board_isPlayable(char** board);
+int  Board_isPlayable(char** board, struct counterSet* pieceCounters);
 
 void Board_update    (char** board, struct PossibleMove* move);
 
