@@ -108,8 +108,8 @@ char stringToPiece(char* str, int color){
 
 int removePiece(char* command){
 	int x, y;
-	char* tile;
-	sscanf(command, "rm %s", tile);
+	char tile[6];
+	sscanf(command, "rm %5s", tile);
 	if (readTile(tile, &x, &y) == -1){
 		return -1;
 	}
@@ -126,10 +126,10 @@ int removePiece(char* command){
 
 int setPiece(char* command){
 	int x, y;
-	char* tile;
-	char* pieceString;
-	char* colorString;
-	sscanf(command, "set %s %s %s", tile, pieceString, colorString);
+	char tile[6];
+	char colorString[6];
+	char pieceString[7];
+	sscanf(command, "set %5s %5s %6s", tile, colorString, pieceString);
 	
 	if (readTile(tile, &x, &y) == -1){
 		return -1;
@@ -183,9 +183,9 @@ int setDifficulty(char* command){
 		return -1;
 	}
 	
-	char* diff;
+	char diff[6];
 	int depth;
-	sscanf(command, "difficulty %s %d", diff, &depth);
+	sscanf(command, "difficulty %5s %d", diff, &depth);
 	if (str_equals(diff, "best")){
 		maxRecursionDepth = BEST;
 		return 0;
@@ -206,8 +206,8 @@ int setUserColor(char* command){
 		return -1;
 	}
 	
-	char* colorString;
-	sscanf(command, "user_color %s", colorString);
+	char colorString[6];
+	sscanf(command, "user_color %5s", colorString);
 	int color = stringToColor(colorString);
 	if (color == -1){
 		return -1;
@@ -217,19 +217,19 @@ int setUserColor(char* command){
 }
 
 int setFirstPlayer(char* command){
-	char* colorString;
+	char colorString[6];
 	sscanf(command, "next_player %5s", colorString);
 	int color = stringToColor(colorString);
 	if (color == -1){
 		return -1;
 	}
-	turn = color;
+	first = color;
 	return 0;
 }
 
 int printMovesOfPiece(char* command){
-	char* tile;
-	sscanf(command, "get_moves %s", tile);
+	char tile[6];
+	sscanf(command, "get_moves %5s", tile);
 	int x, y;
 	if (readTile(tile, &x, &y) == -1){
 		return -1;
@@ -245,20 +245,29 @@ int printMovesOfPiece(char* command){
 	return 0;
 }
 
+void updateKingPosition(int player, int x, int y){
+	int piece = Board_getPiece(board, x, y);
+	if (toBlack(piece) == Board_BLACK_KING){
+		kingX[player] = x;
+		kingY[player] = y;
+	}
+}
+
 int movePiece(char* command){
-	char* fromTile;
-	char* toTile;
-	char* promotion;
-	sscanf(command, "move %s to %s %s", fromTile, toTile, promotion);
+	char fromTile[6];
+	char toTile[6];
+	//char promotion[7];
+	sscanf(command, "move %5s to %5s", fromTile, toTile);
 	int fromX, fromY, toX, toY;
-	if (readTile(toTile, &fromX, &fromY) == -1 || readTile(toTile, &toX, &toY) == -1){
+	
+	if (readTile(fromTile, &fromX, &fromY) == -1 
+			|| readTile(toTile, &toX, &toY) == -1){
 		return -1;
 	}
-	
-	if (!Board_isInRange(fromX, fromY) || !Board_isInRange(toX, toY)){
+	if (!Board_isInRange(fromX, fromY) 
+			|| !Board_isInRange(toX, toY)){
 		return -2;
 	}
-	
 	if (Board_getColor(board, fromX, fromY) != turn){
 		return -5;
 	}
@@ -279,14 +288,11 @@ int movePiece(char* command){
 	}
 	
 	Board_update(board, move);
+	Board_print(board);
 	PossibleMove_free(move);
 	PossibleMoveList_free(possibleMoves);
-	
-	int piece = Board_getPiece(board, toX, toY);
-	if (toBlack(piece) == Board_BLACK_KING){
-		kingX[turn] = toX;
-		kingY[turn] = toY;
-	}
+	updateKingPosition(turn, toX, toY);
+	turn = !turn;
 	return 0;
 }
 
@@ -297,7 +303,7 @@ int movePiece(char* command){
  * @return: relevant exitcode
  */
 int executeCommand(char* command){
-	char* str;
+	char str[64];
 	sscanf(command, "%s", str);
 	if (str_equals(str, "quit")){
 		freeAndExit();
@@ -453,15 +459,8 @@ int main(){
 	initialize();
 	Board_print(board);
 	printf("Enter game settings:\n");
-	int gameOver = 0;
-	while (!gameOver){
-		if (Board_isInCheck(board, kingX[turn], kingY[turn])){
-			printf("Check!\n");
-		}
+	while (1){
 		humanTurn(turn);
-		Board_print(board);
-		gameOver = Board_isInCheck(board, kingX[turn], kingY[turn]);
-		turn = !turn;
 	}
 	printf("Mate! %s player wins the game\n", (turn == BLACK)? "White" : "Black");
 	freeGlobals();

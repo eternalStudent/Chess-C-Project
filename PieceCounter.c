@@ -21,6 +21,7 @@ static int pieceToNum(char piece, int x, int y){
 		case Board_BLACK_KING:
 		case Board_WHITE_KING:   return 6;
 	}
+	return -1; //should never happen
 }
 
 static int getColor(char piece){
