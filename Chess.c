@@ -42,7 +42,7 @@ void initialize(){
 	kingX[BLACK] = 4;
 	kingY[BLACK] = 8;
 	kingX[WHITE] = 4;
-	kingY[BLACK] = 1;
+	kingY[WHITE] = 1;
 	PieceCounter_setToMax(counter);
 }
 
@@ -106,6 +106,14 @@ char stringToPiece(char* str, int color){
 	return piece;
 }
 
+void updateKingPosition(int player, int x, int y){
+	int piece = Board_getPiece(board, x, y);
+	if (toBlack(piece) == Board_BLACK_KING){
+		kingX[player] = x;
+		kingY[player] = y;
+	}
+}
+
 int removePiece(char* command){
 	int x, y;
 	char tile[6];
@@ -151,10 +159,7 @@ int setPiece(char* command){
 	PieceCounter_update(counter, piece, 1, x, y);
 	
 	Board_setPiece(board, x, y, piece);
-	if (toBlack(piece) == Board_BLACK_KING){
-		kingX[color] = x;
-		kingY[color] = y;
-	}
+	updateKingPosition(color, x, y);
 	return 0;
 }
 
@@ -243,14 +248,6 @@ int printMovesOfPiece(char* command){
 	PossibleMoveList_print(possibleMoves);
 	PossibleMoveList_free(possibleMoves);
 	return 0;
-}
-
-void updateKingPosition(int player, int x, int y){
-	int piece = Board_getPiece(board, x, y);
-	if (toBlack(piece) == Board_BLACK_KING){
-		kingX[player] = x;
-		kingY[player] = y;
-	}
 }
 
 int movePiece(char* command){
@@ -460,6 +457,9 @@ int main(){
 	Board_print(board);
 	printf("Enter game settings:\n");
 	while (1){
+		if (Board_isInCheck(board, kingX[turn], kingY[turn])){
+			printf("Check!\n");
+		}
 		humanTurn(turn);
 	}
 	printf("Mate! %s player wins the game\n", (turn == BLACK)? "White" : "Black");

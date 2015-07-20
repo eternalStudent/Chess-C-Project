@@ -60,6 +60,10 @@ int LinkedList_add(struct LinkedList* list, void* data){
 }
 
 void LinkedList_concatenate(struct LinkedList* this, struct LinkedList* other){
+	if (other->length == 0){
+		free(other);
+		return;
+	}
 	if (this->length == 0){
 		this->first = other->first;
 	}

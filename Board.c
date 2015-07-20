@@ -410,7 +410,7 @@ struct LinkedList* Board_getPossibleMoves(char** board, int player){
 	}
 	for (int x = 1; x <= Board_SIZE; x++){
 		for (int y = 1; y <= Board_SIZE; y++){
-			if (Board_isEmpty(board, x, y) || Board_getColor(board, x, y) != player){
+			if (Board_getColor(board, x, y) != player){
 				continue;
 			}
 			struct LinkedList* pieceMoves = Board_getPossibleMovesOfPiece(board, x, y);
@@ -418,16 +418,7 @@ struct LinkedList* Board_getPossibleMoves(char** board, int player){
 				PossibleMoveList_free(possibleMoves);
 				return NULL;
 			}
-			if (LinkedList_length(pieceMoves) == 0){
-				continue;
-			}
-			if (LinkedList_length(possibleMoves) == 0) {
-				LinkedList_free(possibleMoves);
-				possibleMoves = pieceMoves;
-			}
-			else{
-				LinkedList_concatenate(possibleMoves, pieceMoves);
-			}		
+			LinkedList_concatenate(possibleMoves, pieceMoves);	
 		}
 	}
 	return possibleMoves;
@@ -442,9 +433,11 @@ int Board_isInCheck(char** board, int kingX, int kingY){
 	while (Iterator_hasNext(&iterator)){
 		struct PossibleMove* opponentMove = (struct PossibleMove*)Iterator_next(&iterator);
 		if (kingX == opponentMove->toX && kingY == opponentMove->toY){
+			PossibleMoveList_free(opponentMoves);
 			return 1;
 		}
 	}
+	PossibleMoveList_free(opponentMoves);
 	return 0;
 }	
 
