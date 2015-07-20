@@ -40,14 +40,6 @@ char** Board_new();
 
 void Board_init      (char** board);
 
-struct counterSet* newCounterSet();
-
-int canPieceBeAdded(struct counterSet* pieceCounters, char piece, int x, int y);
-
-void updatePieceCounter(struct counterSet* pieceCounters, char piece, int amountToAdd, int x, int y);
-
-void resetCounters(struct counterSet* pieceCounters);
-
 void Board_clear     (char** board);
 
 void Board_copy      (char** dest, char** src);
@@ -62,7 +54,7 @@ int  Board_isEmpty   (char** board, int x, int y);
 
 int  Board_isInRange (int x, int y);
 
-int  Board_isPlayable(char** board, struct counterSet* pieceCounters);
+int  Board_isPlayable(char** board, int counter[2][7]);
 
 void Board_update    (char** board, struct PossibleMove* move);
 
@@ -72,7 +64,7 @@ int  Board_evalPiece (char** board, int x, int y, int color);
 
 int  Board_getScore  (char** board, int color);
 
-struct LinkedList* Board_getPossibleMoves(char** board, int player, int check[2]);
+struct LinkedList* Board_getPossibleMoves(char** board, int player);
 
 void Board_print     (char** board);
 

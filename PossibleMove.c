@@ -1,4 +1,4 @@
-#include "Board.c"
+#include "PieceCounter.c"
 
 /* 
  * Creates a new PossibleMove structure, consisting of the starting tile,

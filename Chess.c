@@ -12,14 +12,15 @@
 #define toBlack(x) toupper(x)
 
 char** board;
-struct counterSet* pieceCounters;
-int player1;
 int maxRecursionDepth;
 int state;
 int gameMode;
+int player1;
 int turn;
 int first;
-int check[2];
+int counter[2][7];
+int kingX[2];
+int kingY[2];
 
 
 /*
@@ -31,22 +32,18 @@ void initialize(){
 		fprintf(stderr, "Error: standard function calloc has failed\n");
 		exit(0);
 	}
-	pieceCounters = newCounterSet();
-	if (!pieceCounters){
-		Board_free(board);
-		fprintf(stderr, "Error: standard function malloc has failed\n");
-		exit(0);
-	}
-
 	Board_init(board);
-	player1 = WHITE;
 	maxRecursionDepth = 1;
 	state = SETTINGS;
+	player1 = WHITE;
 	turn = player1;
 	first = WHITE;
 	gameMode = 1;
-	check[BLACK] = 0;
-	check[WHITE] = 0;
+	kingX[BLACK] = 4;
+	kingY[BLACK] = 8;
+	kingX[WHITE] = 4;
+	kingY[BLACK] = 1;
+	PieceCounter_setToMax(counter);
 }
 
 /*
@@ -54,7 +51,6 @@ void initialize(){
  */
 void freeGlobals(){
 	Board_free(board);
-	free(pieceCounters);
 }
 
 /*
@@ -65,34 +61,12 @@ void freeAndExit(){
 	exit(0);
 }
 
-int readTile(int* x, int* y){
-	char str[64];
+int readTile(char* str, int* x, int* y){
 	char ch;
-	scanf("%s", str);
 	if (sscanf(str, "<%c,%1d>", &ch, y) < 0){
 		return -1;
 	}
 	*x = ch-96;
-	return 0;
-}
-
-int readTiles(int* fromX, int* fromY, int* toX, int* toY){
-	char str1[64];
-	char str2[64];
-	char str3[64];
-	char ch1, ch2;
-	scanf("%63s %s %63s", str1, str2, str3);
-	if (sscanf(str1, "<%c,%1d>", &ch1, fromY) < 0){
-		return -1;
-	}
-	if (!str_equals(str2, "to")){
-		return -1;
-	}
-	if (sscanf(str3, "<%c,%1d>", &ch2, toY) < 0){
-		return -1;
-	}
-	*fromX = ch1-96;
-	*toX = ch2-96;
 	return 0;
 }
 
@@ -132,68 +106,61 @@ char stringToPiece(char* str, int color){
 	return piece;
 }
 
-int readPiece(){
-	char colorString[6];
-	char pieceString[7];
-	int color;
-	char piece;
-	if (scanf("%5s %6s", colorString, pieceString) < 0){
-		return -1;
-	}
-	color = stringToColor(colorString);
-	if (color == -1){
-		return -1;
-	}
-	piece = stringToPiece(pieceString, color);
-	if (piece == 0){
-		return -1;
-	}
-	return piece;
-}
-
-int removePiece(){
+int removePiece(char* command){
 	int x, y;
-	if (readTile(&x, &y) == -1){
+	char* tile;
+	sscanf(command, "rm %s", tile);
+	if (readTile(tile, &x, &y) == -1){
 		return -1;
 	}
 	if (!Board_isInRange(x, y)){
 		return -2;
 	}
-	updatePieceCounter(pieceCounters, Board_getPiece(board, x, y), -1, x, y);
+	
+	char piece = Board_getPiece(board, x, y);
+	PieceCounter_update(counter, piece, -1, x, y);
+	
 	Board_removePiece(board, x, y);
 	return 0;
 }
 
-int setPiece(){
+int setPiece(char* command){
 	int x, y;
-	if (readTile(&x, &y) == -1){
+	char* tile;
+	char* pieceString;
+	char* colorString;
+	sscanf(command, "set %s %s %s", tile, pieceString, colorString);
+	
+	if (readTile(tile, &x, &y) == -1){
 		return -1;
 	}
 	if (!Board_isInRange(x, y)){
 		return -2;
 	}
-	char piece = readPiece();
-	if (piece == -1){
+	int color = stringToColor(colorString);
+	char piece = stringToPiece(pieceString, color);
+	if (piece == 0 || color == -1){
 		return -1;
 	}
-	
-	if (canPieceBeAdded(pieceCounters,piece, x, y)){
-		if(!Board_isEmpty(board,x,y)){
-			updatePieceCounter(pieceCounters, Board_getPiece(board, x, y), -1, x, y);
-		}
-		Board_setPiece(board, x, y, piece);
-		updatePieceCounter(pieceCounters, piece, 1, x, y);
-		return 0;
+	if (PieceCounter_isAtMax(counter, piece, x, y)){
+		return -8;
 	}
 	
-	else{
-		return -8;
-	}	
+	char removedPiece = Board_getPiece(board, x, y);
+	PieceCounter_update(counter, removedPiece, -1, x, y);
+	PieceCounter_update(counter, piece, 1, x, y);
+	
+	Board_setPiece(board, x, y, piece);
+	if (toBlack(piece) == Board_BLACK_KING){
+		kingX[color] = x;
+		kingY[color] = y;
+	}
+	return 0;
 }
 
-int setGameMode(){
+int setGameMode(char* command){
 	int mode;
-	if (scanf("%d", &mode) < 0){
+	if (sscanf(command, "game_mode %d", &mode) < 0){
 		return -1;
 	}
 	
@@ -211,13 +178,14 @@ int setGameMode(){
 	return 0;
 }
 
-int setDifficulty(){
+int setDifficulty(char* command){
 	if (gameMode != 2){
 		return -1;
 	}
 	
-	char diff[6];
-	scanf("%5s", diff);
+	char* diff;
+	int depth;
+	sscanf(command, "difficulty %s %d", diff, &depth);
 	if (str_equals(diff, "best")){
 		maxRecursionDepth = BEST;
 		return 0;
@@ -226,8 +194,6 @@ int setDifficulty(){
 		return -1;
 	}
 	
-	int depth;
-	scanf("%d", &depth);
 	if (depth < 1 || depth > 4){
 		return -4;
 	}
@@ -235,13 +201,13 @@ int setDifficulty(){
 	return 0;
 }
 
-int setUserColor(){
+int setUserColor(char* command){
 	if (gameMode != 2){
 		return -1;
 	}
 	
-	char colorString[6];
-	scanf("%5s", colorString);
+	char* colorString;
+	sscanf(command, "user_color %s", colorString);
 	int color = stringToColor(colorString);
 	if (color == -1){
 		return -1;
@@ -250,9 +216,9 @@ int setUserColor(){
 	return 0;
 }
 
-int setFirstPlayer(){
-	char colorString[6];
-	scanf("%5s", colorString);
+int setFirstPlayer(char* command){
+	char* colorString;
+	sscanf(command, "next_player %5s", colorString);
 	int color = stringToColor(colorString);
 	if (color == -1){
 		return -1;
@@ -261,42 +227,33 @@ int setFirstPlayer(){
 	return 0;
 }
 
-int printMovesOfPiece(){
+int printMovesOfPiece(char* command){
+	char* tile;
+	sscanf(command, "get_moves %s", tile);
 	int x, y;
-	if (readTile(&x, &y) == -1){
+	if (readTile(tile, &x, &y) == -1){
 		return -1;
 	}
-	struct LinkedList* possibleMoves = Board_getPossibleMovesOfPiece(board, x, y, check);
+	
+	struct LinkedList* possibleMoves = Board_getPossibleMovesOfPiece(board, x, y);
+	if (!possibleMoves){
+		return 1;
+	}
+	
 	PossibleMoveList_print(possibleMoves);
 	PossibleMoveList_free(possibleMoves);
 	return 0;
 }
 
-int checkForCheck(int x, int y){
-	struct LinkedList* possibleMoves = Board_getPossibleMovesOfPiece(board, x, y, check);
-	if (!possibleMoves){
-		return 1;
-	}
-	struct Iterator iterator;
-	Iterator_init(&iterator, possibleMoves);
-	while(Iterator_hasNext(&iterator)){
-		struct PossibleMove* move = (struct PossibleMove*)Iterator_next(&iterator);
-		char piece = Board_getPiece(board, move->toX, move->toY);
-		if (toBlack(piece) == Board_BLACK_KING){
-			check[turn] = 1;
-			printf("Check!\n");
-			return 0;
-		}
-	}
-	return 0;
-}
-
-int movePiece(){
+int movePiece(char* command){
+	char* fromTile;
+	char* toTile;
+	char* promotion;
+	sscanf(command, "move %s to %s %s", fromTile, toTile, promotion);
 	int fromX, fromY, toX, toY;
-	if (readTiles(&fromX, &fromY, &toX, &toY) == -1){
+	if (readTile(toTile, &fromX, &fromY) == -1 || readTile(toTile, &toX, &toY) == -1){
 		return -1;
 	}
-	//printf("<%c,%d>\n", toX+96, toY);
 	
 	if (!Board_isInRange(fromX, fromY) || !Board_isInRange(toX, toY)){
 		return -2;
@@ -311,7 +268,7 @@ int movePiece(){
 		return 1;
 	}
 	
-	struct LinkedList* possibleMoves = Board_getPossibleMovesOfPiece(board, fromX, fromY, check);
+	struct LinkedList* possibleMoves = Board_getPossibleMovesOfPiece(board, fromX, fromY);
 	if (!possibleMoves){
 		PossibleMove_free(move);
 		return 1;
@@ -322,12 +279,15 @@ int movePiece(){
 	}
 	
 	Board_update(board, move);
-	Board_print(board);
-	check[turn] = 0;
-	turn = !turn;
 	PossibleMove_free(move);
 	PossibleMoveList_free(possibleMoves);
-	return checkForCheck(toX, toY);
+	
+	int piece = Board_getPiece(board, toX, toY);
+	if (toBlack(piece) == Board_BLACK_KING){
+		kingX[turn] = toX;
+		kingY[turn] = toY;
+	}
+	return 0;
 }
 
 /*
@@ -337,60 +297,60 @@ int movePiece(){
  * @return: relevant exitcode
  */
 int executeCommand(char* command){
-	if (str_equals(command, "quit")){
+	char* str;
+	sscanf(command, "%s", str);
+	if (str_equals(str, "quit")){
 		freeAndExit();
 		return 0;
 	}	
 	if (state == SETTINGS){
-		if (str_equals(command, "game_mode")){
-			return setGameMode();
+		if (str_equals(str, "game_mode")){
+			return setGameMode(command);
 		}
-		if (str_equals(command, "difficulty")){
-			return setDifficulty();
+		if (str_equals(str, "difficulty")){
+			return setDifficulty(command);
 		}
-		if (str_equals(command, "user_color")){
-			return setUserColor();
+		if (str_equals(str, "user_color")){
+			return setUserColor(command);
 		}
-		if (str_equals(command, "load")){
-			//return loadGame();
+		if (str_equals(str, "load")){
+			//return loadGame(command);
 		}
-		if (str_equals(command, "clear")){
+		if (str_equals(str, "clear")){
 			Board_clear(board);
-			resetCounters(pieceCounters);
+			PieceCounter_reset(counter);
 			return 0;
 		}
-		if (str_equals(command, "next_player")){
-			return setFirstPlayer();
+		if (str_equals(str, "next_player")){
+			return setFirstPlayer(command);
 		}
-		if (str_equals(command, "rm")){
-			return removePiece();
+		if (str_equals(str, "rm")){
+			return removePiece(command);
 		}
-		if (str_equals(command, "set")){
-			return setPiece();
+		if (str_equals(str, "set")){
+			return setPiece(command);
 		}
-		if (str_equals(command, "print")){
+		if (str_equals(str, "print")){
 			Board_print(board);
 			return 0;
 		}
-		if (str_equals(command, "start")){
-			if(Board_isPlayable(board, pieceCounters)){
-				turn = first;
-				state = GAME;
-			}
-			else{
+		if (str_equals(str, "start")){
+			if(!Board_isPlayable(board, counter)){
 				return -7;
-			}
+			}	
+			turn = first;
+			state = GAME;
+			return 0;
 		}
 	}
 	else{
-		if (str_equals(command, "get_moves")){
-			return printMovesOfPiece();
+		if (str_equals(str, "get_moves")){
+			return printMovesOfPiece(command);
 		}
-		if (str_equals(command, "move")){
-			return movePiece();
+		if (str_equals(str, "move")){
+			return movePiece(command);
 		}
 	}
-	scanf("\n"); //meant to go to the end of the line, not working though
 	return -1;
 }
 
@@ -401,7 +361,7 @@ int executeCommand(char* command){
  */
 void printError(int error){
 	switch (error){
-		case  1: fprintf(stderr, "Error: standard function calloc has failed\n"); freeAndExit(); break;
+		case  1: fprintf(stderr, "Error: standard function calloc has failed\n"); freeAndExit();
 		case  0: break;
 		case -1: printf("Illegal command, please try again\n"); break;
 		case -2: printf("Invalid position on the board\n"); break;
@@ -422,7 +382,7 @@ struct PossibleMove* minimax(struct PossibleMove* possibleMove, int depth, int p
 		return possibleMove;
 	}
 	char** board = possibleMove->board;
-	struct LinkedList* possibleMoves = Board_getPossibleMoves(board, player, check);
+	struct LinkedList* possibleMoves = Board_getPossibleMoves(board, player);
 	if (LinkedList_length(possibleMoves) == 0){
 		LinkedList_free(possibleMoves);
 		return possibleMove;
@@ -483,7 +443,7 @@ void humanTurn(int player){
 			printf(" player - enter your move:\n");
 		}
 		char command[64];
-		scanf("%63s", command);
+		fgets(command, 63, stdin);
 		int error = executeCommand(command);
 		printError(error);
 	}
@@ -495,9 +455,13 @@ int main(){
 	printf("Enter game settings:\n");
 	int gameOver = 0;
 	while (!gameOver){
+		if (Board_isInCheck(board, kingX[turn], kingY[turn])){
+			printf("Check!\n");
+		}
 		humanTurn(turn);
-		struct LinkedList* possibleMoves = Board_getPossibleMoves(board, turn, check);
-		gameOver = LinkedList_length(possibleMoves) == 0;
+		Board_print(board);
+		gameOver = Board_isInCheck(board, kingX[turn], kingY[turn]);
+		turn = !turn;
 	}
 	printf("Mate! %s player wins the game\n", (turn == BLACK)? "White" : "Black");
 	freeGlobals();
