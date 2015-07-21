@@ -70,6 +70,10 @@ int readTile(char* str, int* x, int* y){
 	return 0;
 }
 
+int pieceIsPawn (char** board, int x, int y){
+	return (Board_getPiece(board, x, y) == Board_BLACK_PAWN || Board_getPiece(board, x, y) == Board_WHITE_PAWN); 
+}
+
 int stringToColor(char* str){
 	if (str_equals(str, "black")){
 		return BLACK;
@@ -253,10 +257,13 @@ int printMovesOfPiece(char* command){
 int movePiece(char* command){
 	char fromTile[6];
 	char toTile[6];
-	//char promotion[7];
-	sscanf(command, "move %5s to %5s", fromTile, toTile);
-	int fromX, fromY, toX, toY;
+	char promoteToAsString[7];
+	char promoteTo;
+
+	sscanf(command, "move %5s to %5s %6s", fromTile, toTile, promoteToAsString);
+	promoteTo = stringToPiece(promoteToAsString, turn);
 	
+	int fromX, fromY, toX, toY;
 	if (readTile(fromTile, &fromX, &fromY) == -1 
 			|| readTile(toTile, &toX, &toY) == -1){
 		return -1;
@@ -269,7 +276,11 @@ int movePiece(char* command){
 		return -5;
 	}
 	
-	struct PossibleMove* move = PossibleMove_new(fromX, fromY, toX, toY, board);
+	if(pieceIsPawn(board, fromX, fromY) && Board_isFurthestRowForPlayer(turn, toY) && promoteTo == 0){
+		promoteTo = (turn = WHITE)? 'q':'Q';        //default promotion
+	}
+	
+	struct PossibleMove* move = PossibleMove_new(fromX, fromY, toX, toY, promoteTo, board);
 	if (!move){
 		return 1;
 	}
@@ -281,9 +292,15 @@ int movePiece(char* command){
 	}
 	
 	if (!PossibleMoveList_contains(possibleMoves, move)){
+		PossibleMove_free(move);
 		return -6;
 	}
 	
+	if (promoteTo != 0){
+		char formerPawn = (turn == WHITE)? 'm':'M';
+		PieceCounter_update(counter, formerPawn, -1, toX, toY); // toX and toY are irrelevant in this line 
+		PieceCounter_update(counter, promoteTo, -1, toX, toY);
+	}
 	Board_update(board, move);
 	Board_print(board);
 	PossibleMove_free(move);

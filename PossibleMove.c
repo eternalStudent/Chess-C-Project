@@ -10,7 +10,7 @@
  *          board - the board before the move
  * @return: NULL if any allocation errors occurred, the structure otherwise
  */
-struct PossibleMove* PossibleMove_new(int fromX, int fromY, int toX, int toY, char** board){
+struct PossibleMove* PossibleMove_new(int fromX, int fromY, int toX, int toY, char promoteTo, char** board){
 	struct PossibleMove* move;
 	move = (struct PossibleMove*)calloc(1, sizeof(struct PossibleMove));
 	if (!move){
@@ -20,13 +20,13 @@ struct PossibleMove* PossibleMove_new(int fromX, int fromY, int toX, int toY, ch
 	move->fromY = fromY;
 	move->toX = toX;
 	move->toY = toY;
-	move->promotion = 0;
+	move->promotion = promoteTo;
 	move->board = Board_getPossibleBoard(board, move);
 	return move;
 }
 
 /*
- * Checks whether a PossibleMove struct represents the same move.
+ * Checks whether two different PossibleMove structs represent the same move.
  *
  * @params: (other) - a pointer to the struct to be checked
  * @return: 1 (true) if both of the tiles represent the same move, 0 (false) otherwise
@@ -43,10 +43,14 @@ int PossibleMove_equals(struct PossibleMove* this, struct PossibleMove* other){
 void PossibleMove_print(struct PossibleMove* move){
 	printf("move <%c,%d> to <%c,%d>", move->fromX+96, move->fromY, move->toX+96, move->toY);
 	switch(move->promotion){
-		case 'b': printf("bishop\n"); break;
-		case 'r': printf("rook\n"); break;
-		case 'n': printf("knight\n"); break;
-		case 'q': printf("queen\n"); break;
+		case 'b':
+		case 'B': printf(" bishop\n"); break;
+		case 'r': 
+		case 'R': printf(" rook\n"); break;
+		case 'n': 
+		case 'N': printf(" knight\n"); break;
+		case 'q':
+		case 'Q': printf(" queen\n"); break;
 		default: printf("\n");
 	}
 }

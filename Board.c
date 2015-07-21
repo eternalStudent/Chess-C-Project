@@ -19,6 +19,21 @@ char** Board_new(){
 }
 
 /*
+ * Checks if a given row is the furthest row for the given player.
+ *
+ * @params: (player) - the relevant player
+			(y) - the relevant row number
+ *
+ * @return: 1 if (y) is the furthest row for (player), 0 otherwise 
+ */
+int Board_isFurthestRowForPlayer (int player, int y){
+	if (((player == WHITE) && (y == 8)) || ((player == BLACK) && (y == 1))){
+		return 1;
+	}
+	return 0;
+}
+
+/*
  * Populates the board in the standard way.
  */
 void Board_init(char** board){
@@ -160,6 +175,9 @@ static int Board_move(char** board, int oldX, int oldY, int newX, int newY){
  */
 void Board_update(char** board, struct PossibleMove* move){
 	Board_move(board, move->fromX, move->fromY, move->toX, move->toY);
+	if (move->promotion != 0){
+		Board_setPiece(board, move->toX, move->toY, move->promotion);
+	}
 }
 
 /*
@@ -237,12 +255,20 @@ int Board_getScore(char** board, int player){
 }
 
 static struct LinkedList* getPawnMoves(char** board, int fromX, int fromY){
+	int player = Board_getColor(board, fromX, fromY);
+	char promotionOptions[4];
+	promotionOptions[0] = (player == WHITE)? 'q':'Q';
+	promotionOptions[1] = (player == WHITE)? 'b':'B';
+	promotionOptions[2] = (player == WHITE)? 'n':'N';
+	promotionOptions[3] = (player == WHITE)? 'r':'R';
+	
 	struct LinkedList* possibleMoves = PossibleMoveList_new();
+	
 	if (!possibleMoves){
 		return NULL;
 	}
-	int player = Board_getColor(board, fromX, fromY);
-	int forward = player == WHITE? 1: -1;
+	
+	int forward = (player == WHITE)? 1: -1;
 	for (int sideward = -1; sideward <= 1; sideward++){
 		int toX = fromX+sideward;
 		int toY = fromY+forward;
@@ -253,12 +279,22 @@ static struct LinkedList* getPawnMoves(char** board, int fromX, int fromY){
 		int canMoveForward = Board_isEmpty(board, toX, toY) && sideward == 0;
 		int canCapture = Board_getColor(board, toX, toY) == !player && sideward != 0;
 		if (canMoveForward || canCapture){
-			if (PossibleMoveList_add(possibleMoves, fromX, fromY, toX, toY, board) != 0){
-				PossibleMoveList_free(possibleMoves);
-				return NULL;
+			if (Board_isFurthestRowForPlayer(player, toY)){	//generate all possible promotions	
+				for (int i = 0; i <= 3; i++){
+					if (PossibleMoveList_add(possibleMoves, fromX, fromY, toX, toY, promotionOptions[i], board) != 0){
+						PossibleMoveList_free(possibleMoves);
+						return NULL;
+					}
+				}
+			}	
+			else{
+				if (PossibleMoveList_add(possibleMoves, fromX, fromY, toX, toY, 0, board) != 0){
+					PossibleMoveList_free(possibleMoves);
+					return NULL;
+					}
+				}
 			}
 		}
-	}
 	return possibleMoves;
 }
 
@@ -280,7 +316,7 @@ int addMoveIfLegal(struct LinkedList* possibleMoves, char** board,
 	if (Board_getColor(board, toX, toY) == player){
 		return -1;
 	}
-	PossibleMoveList_add(possibleMoves, fromX, fromY, toX, toY, board); //Allocation error not handled
+	PossibleMoveList_add(possibleMoves, fromX, fromY, toX, toY, 0, board); //Allocation error not handled
 	if (Board_getColor(board, toX, toY) == !player){
 		return -1;
 	}			

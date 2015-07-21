@@ -18,25 +18,9 @@
 #define BLACK 0
 #define WHITE 1
 
-struct counterSet{
-	int whitePawnCounter;
-	int blackPawnCounter;
-	int whiteBishopOnBlackTileCounter;
-	int whiteBishopOnWhiteTileCounter;
-	int blackBishopOnBlackTileCounter;
-	int blackBishopOnWhiteTileCounter;
-	int whiteRookCounter;
-	int blackRookCounter;
-	int whiteKnightCounter;
-	int blackKnightCounter;
-	int whiteQueenCounter;
-	int blackQueenCounter;
-	int whiteKingCounter;
-	int blackKingCounter;
-};
-
-
 char** Board_new();
+
+int Board_isFurthestRowForPlayer (int player, int y);
 
 void Board_init      (char** board);
 
