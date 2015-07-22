@@ -11,7 +11,7 @@
 #define str_equals(x, y) strcmp(x, y) == 0
 #define toBlack(x) toupper(x)
 
-Board* board;
+Board board;
 int maxRecursionDepth;
 int state;
 int gameMode;
@@ -25,12 +25,7 @@ int counter[2][7];
  * Initializes the global variables.
  */
 void initialize(){
-	board = Board_new();
-	if (!board){
-		fprintf(stderr, "Error: standard function calloc has failed\n");
-		exit(0);
-	}
-	Board_init(board);
+	Board_init(&board);
 	maxRecursionDepth = 1;
 	state = SETTINGS;
 	player1 = WHITE;
@@ -40,24 +35,9 @@ void initialize(){
 	PieceCounter_setToMax(counter);
 }
 
-/*
- * Frees the allocated global variables.
- */
-void freeGlobals(){
-	Board_free(board);
-}
-
-/*
- * Frees the allocated global variables and exit the program.
- */
-void freeAndExit(){
-	freeGlobals();
-	exit(0);
-}
-
 void allocationFailed(){
 	fprintf(stderr, "Error: standard function calloc has failed\n");
-	freeAndExit();
+	exit(0);
 }
 
 int readTile(char* str, int* x, int* y){
@@ -70,7 +50,7 @@ int readTile(char* str, int* x, int* y){
 }
 
 int pieceIsPawn (int x, int y){
-	char piece = Board_getPiece(board, x, y);
+	char piece = Board_getPiece(&board, x, y);
 	return toBlack(piece) == Board_BLACK_PAWN; 
 }
 
@@ -121,7 +101,7 @@ int removePiece(char* command){
 		return -2;
 	}
 	
-	char piece = Board_removePiece(board, x, y);
+	char piece = Board_removePiece(&board, x, y);
 	PieceCounter_update(counter, piece, -1, x, y);
 	return 0;
 }
@@ -148,12 +128,12 @@ int setPiece(char* command){
 		return -8;
 	}
 	
-	char removedPiece = Board_getPiece(board, x, y);
+	char removedPiece = Board_getPiece(&board, x, y);
 	PieceCounter_update(counter, removedPiece, -1, x, y);
 	PieceCounter_update(counter, piece, 1, x, y);
 	
-	Board_setPiece(board, x, y, piece);
-	Board_updateKingPosition(board, x, y);
+	Board_setPiece(&board, x, y, piece);
+	Board_updateKingPosition(&board, x, y);
 	return 0;
 }
 
@@ -234,7 +214,7 @@ int printMovesOfPiece(char* command){
 		return -1;
 	}
 	
-	struct LinkedList* possibleMoves = Board_getPossibleMovesOfPiece(board, x, y);
+	struct LinkedList* possibleMoves = Board_getPossibleMovesOfPiece(&board, x, y);
 	if (!possibleMoves){
 		return 1;
 	}
@@ -262,7 +242,7 @@ int movePiece(char* command){
 			|| !Board_isInRange(toX, toY)){
 		return -2;
 	}
-	if (Board_getColor(board, fromX, fromY) != turn){
+	if (Board_getColor(&board, fromX, fromY) != turn){
 		return -5;
 	}
 	
@@ -270,12 +250,12 @@ int movePiece(char* command){
 		promoteTo = (turn = WHITE)? 'q':'Q';        //default promotion
 	}
 	
-	struct PossibleMove* move = PossibleMove_new(fromX, fromY, toX, toY, promoteTo, board);
+	struct PossibleMove* move = PossibleMove_new(fromX, fromY, toX, toY, promoteTo, &board);
 	if (!move){
 		return 1;
 	}
 	
-	struct LinkedList* possibleMoves = Board_getPossibleMovesOfPiece(board, fromX, fromY);
+	struct LinkedList* possibleMoves = Board_getPossibleMovesOfPiece(&board, fromX, fromY);
 	if (!possibleMoves){
 		PossibleMove_free(move);
 		return 1;
@@ -291,8 +271,8 @@ int movePiece(char* command){
 		PieceCounter_update(counter, formerPawn, -1, toX, toY); // toX and toY are irrelevant in this line 
 		PieceCounter_update(counter, promoteTo, -1, toX, toY);
 	}
-	Board_update(board, move);
-	Board_print(board);
+	Board_update(&board, move);
+	Board_print(&board);
 	PossibleMove_free(move);
 	PossibleMoveList_free(possibleMoves);
 	turn = !turn;
@@ -309,8 +289,7 @@ int executeCommand(char* command){
 	char str[64];
 	sscanf(command, "%s", str);
 	if (str_equals(str, "quit")){
-		freeAndExit();
-		return 0;
+		exit(0);
 	}	
 	if (state == SETTINGS){
 		if (str_equals(str, "game_mode")){
@@ -326,7 +305,7 @@ int executeCommand(char* command){
 			//return loadGame(command);
 		}
 		if (str_equals(str, "clear")){
-			Board_clear(board);
+			Board_clear(&board);
 			PieceCounter_reset(counter);
 			return 0;
 		}
@@ -340,7 +319,7 @@ int executeCommand(char* command){
 			return setPiece(command);
 		}
 		if (str_equals(str, "print")){
-			Board_print(board);
+			Board_print(&board);
 			return 0;
 		}
 		if (str_equals(str, "start")){
@@ -431,15 +410,15 @@ struct PossibleMove* minimax(struct PossibleMove* possibleMove, int depth, int p
  */
 void computerTurn(){
 	struct PossibleMove possibleMove;
-	possibleMove.board = board;
+	possibleMove.board = &board;
 	struct PossibleMove* bestMove = minimax(&possibleMove, maxRecursionDepth, !player1);
 	printf("Computer: ");
 	PossibleMove_print(bestMove);
 	printf("\n");
-	Board_update(board, bestMove);
+	Board_update(&board, bestMove);
 	PossibleMove_free(bestMove);
 	turn = !turn;
-	Board_print(board);
+	Board_print(&board);
 }
 
 /*
@@ -460,14 +439,14 @@ void humanTurn(int player){
 
 int main(){
 	initialize();
-	Board_print(board);
+	Board_print(&board);
 	printf("Enter game settings:\n");
 	while (1){
-		struct LinkedList* possibleMoves = Board_getPossibleMoves(board, turn);
+		struct LinkedList* possibleMoves = Board_getPossibleMoves(&board, turn);
 		if (!possibleMoves){
 			allocationFailed();
 		}
-		if (Board_isInCheck(board, turn)){
+		if (Board_isInCheck(&board, turn)){
 			printf("Check\n");
 		}
 		if (LinkedList_length(possibleMoves) == 0){
@@ -475,12 +454,11 @@ int main(){
 		}
 		humanTurn(turn);
 	}
-	if (Board_isInCheck(board, turn)){
+	if (Board_isInCheck(&board, turn)){
 		printf("Mate! %s player wins the game\n", (turn == BLACK)? "White" : "Black");
 	}
 	else{
 		printf("The game ends in a tie\n");
 	}
-	freeGlobals();
 	return 0;
 }
