@@ -1,5 +1,5 @@
 typedef struct Board{
-	char** matrix;
+	char matrix[8][8];
 	int kingX[2];
 	int kingY[2];
 } Board;

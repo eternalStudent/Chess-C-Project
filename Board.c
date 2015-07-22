@@ -5,37 +5,13 @@
 /*
  * Creates a new board structure.
  *
- * @return:  NULL if an allocation error occurred, the new board structured as a two-dimensional char array otherwise
+ * @return:  NULL if an allocation errors occurred, 
+ *           a pointer to a new board otherwise
  */
 Board* Board_new(){
 	Board* board = (Board*)calloc(1, sizeof(Board));
-	if (!board){
-		return NULL;
-	}
-	board->matrix = calloc(Board_SIZE, sizeof(char*));
-	if (!board->matrix){
-		free(board);
-		return NULL;
-	}
-	for(int i = 0; i < Board_SIZE; i++){
-		board->matrix[i] = calloc(Board_SIZE, sizeof(char));
-	}
+	Board_init(board);
 	return board;
-}
-
-/*
- * Checks if a given row is the furthest row for the given player.
- *
- * @params: (player) - the relevant player
-			(y) - the relevant row number
- *
- * @return: 1 if (y) is the furthest row for (player), 0 otherwise 
- */
-int Board_isFurthestRowForPlayer (int player, int y){
-	if (((player == WHITE) && (y == 8)) || ((player == BLACK) && (y == 1))){
-		return 1;
-	}
-	return 0;
 }
 
 /*
@@ -274,6 +250,21 @@ int Board_getScore(Board* board, int player){
 		}
 	}
 	return score;
+}
+
+/*
+ * Checks if a given row is the furthest row for the given player.
+ *
+ * @params: (player) - the relevant player
+			(y) - the relevant row number
+ *
+ * @return: 1 if (y) is the furthest row for (player), 0 otherwise 
+ */
+int Board_isFurthestRowForPlayer (int player, int y){
+	if (((player == WHITE) && (y == 8)) || ((player == BLACK) && (y == 1))){
+		return 1;
+	}
+	return 0;
 }
 
 static struct LinkedList* getPawnMoves(Board* board, int fromX, int fromY){
@@ -530,9 +521,5 @@ void Board_print(Board* board){
  * Frees the structure.
  */
 void Board_free(Board* board){
-	for(int i = 0; i < Board_SIZE; i++){
-		free(board->matrix[i]);
-	}
-	free(board->matrix);
 	free(board);
 }
