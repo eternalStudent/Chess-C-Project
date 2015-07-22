@@ -467,6 +467,9 @@ int main(){
 		if (!possibleMoves){
 			allocationFailed();
 		}
+		if (Board_isInCheck(board, turn)){
+			printf("Check\n");
+		}
 		if (LinkedList_length(possibleMoves) == 0){
 			break;
 		}
