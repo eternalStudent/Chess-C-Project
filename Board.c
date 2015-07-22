@@ -134,17 +134,6 @@ int Board_isEmpty(Board* board, int x, int y){
 }
 
 /*
- * Checks whether the input board is playable. Specifically, checks that both kings are on it.  
- *
- * @params: (board) - the board to be checked
-			(pieceCounters) - the counters that keep track of how many pieces of each kind are on the board
- * @return: 1 (true) if the board is playable, 0 (false) otherwise
- */
-int Board_isPlayable(Board* board, int counter[2][7]){
-	return counter[BLACK][6] && counter[WHITE][6];
-}
-
-/*
  * Determines the color of a piece in a given position.
  *
  * @params: (x, y) the coordinates of the given position
@@ -168,25 +157,15 @@ void Board_updateKingPosition(Board* board, int x, int y){
 }
 
 /*
- * Moves a piece to a different tile in the board.
- *
- * @params: (fromX, fromY) - the coordinates of the piece to be moved
- *          (toX, toY) - the coordinates the piece will be moved to
- */
-static void Board_move(Board* board, int fromX, int fromY, int toX, int toY){
-	char piece = Board_getPiece(board, fromX, fromY);
-	Board_removePiece(board, fromX, fromY);
-	Board_setPiece(board, toX, toY, piece);
-	Board_updateKingPosition(board, toX, toY);
-}
-
-/*
  * Updates a board according to a possible move.
  *
  * @params: (move) - the move to be carried out on the board 
  */
 void Board_update(Board* board, struct PossibleMove* move){
-	Board_move(board, move->fromX, move->fromY, move->toX, move->toY);
+	char piece = Board_getPiece(board, move->fromX, move->fromY);
+	Board_removePiece(board, move->fromX, move->fromY);
+	Board_setPiece(board, move->toX, move->toY, piece);
+	Board_updateKingPosition(board, move->toX, move->toY);
 	if (move->promotion != 0){
 		Board_setPiece(board, move->toX, move->toY, move->promotion);
 	}
@@ -251,6 +230,89 @@ int Board_getScore(Board* board, int player){
 	}
 	return score;
 }
+
+static int canBeCapturedByAPawn(Board* board, int player){
+	char enemyPawn = player == BLACK? Board_WHITE_PAWN: Board_BLACK_PAWN;
+	int forward = player == BLACK? -1: 1;
+	int x = board->kingX[player];
+	int y = board->kingY[player];
+	for (int i = -1; i <= 1; i+=2){
+		if (Board_isInRange(x+i, y+forward)){
+			if (Board_getPiece(board, x+i, y+forward) == enemyPawn){
+				return 1;
+			}
+		}
+	}
+	return 0;
+}
+
+static int canBeCapturedByAKnight(Board* board, int player){
+	char enemyKnight = player == BLACK? Board_WHITE_KNIGHT: Board_BLACK_KNIGHT;
+	int x = board->kingX[player];
+	int y = board->kingY[player];
+	for (int sideward = -1; sideward <= 1; sideward+=2){
+		for (int forward = -2; forward <= 2; forward+=4){
+			if (Board_isInRange(x+sideward, y+forward)){
+				if (Board_getPiece(board, x+sideward, y+forward) == enemyKnight){
+					return 1;
+				}
+			}
+		}
+	}
+	for (int sideward = -2; sideward <= 2; sideward+=4){
+		for (int forward = -1; forward <= 1; forward+=2){
+			if (Board_isInRange(x+sideward, y+forward)){
+				if (Board_getPiece(board, x+sideward, y+forward) == enemyKnight){
+					return 1;
+				}
+			}
+		}
+	}
+	return 0;
+}
+
+static int canBeCapturedByABishopRookOrQueen(Board* board, int player){
+	for (int sideward = -1; sideward <= 1; sideward++){
+		for (int forward = -1; forward <= 1; forward++){
+			for (int dist = 1; dist <= 7; dist++){
+				int x = board->kingX[player]+dist*sideward;
+				int y = board->kingY[player]+dist*forward;
+				if (!Board_isInRange(x, y)){
+					break;
+				}
+				if (Board_getColor(board, x, y) == player){
+					break;
+				}
+				if (Board_isEmpty(board, x, y)){
+					continue;
+				}
+				if (toupper(Board_getPiece(board, x, y)) == Board_BLACK_QUEEN){
+					return 1;
+				}
+				if ((forward == 0 || sideward == 0) 
+						&& toupper(Board_getPiece(board, x, y)) == Board_BLACK_ROOK){
+					return 1;
+				}
+				if (toupper(Board_getPiece(board, x, y)) == Board_BLACK_BISHOP){
+					return 1;
+				}
+			}
+		}
+	}
+	return 0;
+}
+
+static int canBeCapturedByAKing(Board* board){
+	return (abs(board->kingX[BLACK]-board->kingX[WHITE]) <= 1)
+		&& (abs(board->kingY[BLACK]-board->kingY[WHITE]) <= 1);
+}
+
+int Board_isInCheck(Board* board, int player){
+	return canBeCapturedByAPawn(board, player)
+		|| canBeCapturedByAKnight(board, player)
+		|| canBeCapturedByABishopRookOrQueen(board, player)
+		|| canBeCapturedByAKing(board);
+}	
 
 /*
  * Checks if a given row is the furthest row for the given player.
@@ -325,8 +387,11 @@ int addMoveIfLegal(struct LinkedList* possibleMoves, Board* board,
 	if (Board_getColor(board, toX, toY) == player){
 		return -1;
 	}
-	PossibleMoveList_add(possibleMoves, fromX, fromY, toX, toY, 0, board); //Allocation error not handled
-	if (Board_getColor(board, toX, toY) == !player){
+	struct PossibleMove* move = PossibleMove_new(fromX, fromY, toX, toY, 0, board); //Allocation error not handled
+	if (!Board_isInCheck(move->board, player)){
+		LinkedList_add(possibleMoves, move);
+	}
+	if (!Board_isEmpty(board, toX, toY)){
 		return -1;
 	}			
 	return 0;
@@ -468,22 +533,6 @@ struct LinkedList* Board_getPossibleMoves(Board* board, int player){
 	}
 	return possibleMoves;
 }
-
-
-int Board_isInCheck(Board* board, int player){
-	struct LinkedList* opponentMoves = Board_getPossibleMoves(board, !player);
-	struct Iterator iterator;
-	Iterator_init(&iterator, opponentMoves);
-	while (Iterator_hasNext(&iterator)){
-		struct PossibleMove* opponentMove = (struct PossibleMove*)Iterator_next(&iterator);
-		if (board->kingX[player] == opponentMove->toX && board->kingY[player] == opponentMove->toY){
-			PossibleMoveList_free(opponentMoves);
-			return 1;
-		}
-	}
-	PossibleMoveList_free(opponentMoves);
-	return 0;
-}	
 
 /*
  * Auxiliary function for printing the lines as part of printing the playing board.

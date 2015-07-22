@@ -58,3 +58,7 @@ void PieceCounter_setToMax(int counter[2][7]){
 		}	
 	}
 }
+
+int PieceCounter_kingIsMissing(int counter[2][7]){
+	return counter[WHITE][6] == 0 || counter[BLACK][6] == 0;
+}

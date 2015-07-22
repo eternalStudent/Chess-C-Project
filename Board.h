@@ -39,8 +39,6 @@ int  Board_isEmpty   (Board* board, int x, int y);
 
 int  Board_isInRange (int x, int y);
 
-int  Board_isPlayable(Board* board, int counter[2][7]);
-
 void Board_update    (Board* board, struct PossibleMove* move);
 
 Board* Board_getPossibleBoard(Board* board, struct PossibleMove* move);

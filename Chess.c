@@ -55,6 +55,11 @@ void freeAndExit(){
 	exit(0);
 }
 
+void allocationFailed(){
+	fprintf(stderr, "Error: standard function calloc has failed\n");
+	freeAndExit();
+}
+
 int readTile(char* str, int* x, int* y){
 	char ch;
 	if (sscanf(str, "<%c,%1d>", &ch, y) < 0){
@@ -339,7 +344,7 @@ int executeCommand(char* command){
 			return 0;
 		}
 		if (str_equals(str, "start")){
-			if(!Board_isPlayable(board, counter)){
+			if(PieceCounter_kingIsMissing(counter)){
 				return -7;
 			}	
 			turn = first;
@@ -365,7 +370,7 @@ int executeCommand(char* command){
  */
 void printError(int error){
 	switch (error){
-		case  1: fprintf(stderr, "Error: standard function calloc has failed\n"); freeAndExit();
+		case  1: allocationFailed();
 		case  0: break;
 		case -1: printf("Illegal command, please try again\n"); break;
 		case -2: printf("Invalid position on the board\n"); break;
@@ -458,12 +463,21 @@ int main(){
 	Board_print(board);
 	printf("Enter game settings:\n");
 	while (1){
-		if (Board_isInCheck(board, turn)){
-			printf("Check!\n");
+		struct LinkedList* possibleMoves = Board_getPossibleMoves(board, turn);
+		if (!possibleMoves){
+			allocationFailed();
+		}
+		if (LinkedList_length(possibleMoves) == 0){
+			break;
 		}
 		humanTurn(turn);
 	}
-	printf("Mate! %s player wins the game\n", (turn == BLACK)? "White" : "Black");
+	if (Board_isInCheck(board, turn)){
+		printf("Mate! %s player wins the game\n", (turn == BLACK)? "White" : "Black");
+	}
+	else{
+		printf("The game ends in a tie\n");
+	}
 	freeGlobals();
 	return 0;
 }
