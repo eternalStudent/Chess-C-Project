@@ -1,10 +1,16 @@
+typedef struct Board{
+	char** matrix;
+	int kingX[2];
+	int kingY[2];
+} Board;
+
 struct PossibleMove{
 	int fromX, fromY, toX, toY;
 	char promotion;
-	char** board;
+	Board* board;
 };
 
-struct PossibleMove* PossibleMove_new(int, int, int, int, char, char**);
+struct PossibleMove* PossibleMove_new(int, int, int, int, char, Board*);
 
 int PossibleMove_equals(struct PossibleMove* this, struct PossibleMove* other);
 

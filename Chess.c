@@ -11,7 +11,7 @@
 #define str_equals(x, y) strcmp(x, y) == 0
 #define toBlack(x) toupper(x)
 
-char** board;
+Board* board;
 int maxRecursionDepth;
 int state;
 int gameMode;
@@ -19,8 +19,6 @@ int player1;
 int turn;
 int first;
 int counter[2][7];
-int kingX[2];
-int kingY[2];
 
 
 /*
@@ -39,10 +37,6 @@ void initialize(){
 	turn = player1;
 	first = WHITE;
 	gameMode = 1;
-	kingX[BLACK] = 4;
-	kingY[BLACK] = 8;
-	kingX[WHITE] = 4;
-	kingY[WHITE] = 1;
 	PieceCounter_setToMax(counter);
 }
 
@@ -70,8 +64,9 @@ int readTile(char* str, int* x, int* y){
 	return 0;
 }
 
-int pieceIsPawn (char** board, int x, int y){
-	return (Board_getPiece(board, x, y) == Board_BLACK_PAWN || Board_getPiece(board, x, y) == Board_WHITE_PAWN); 
+int pieceIsPawn (int x, int y){
+	char piece = Board_getPiece(board, x, y);
+	return toBlack(piece) == Board_BLACK_PAWN; 
 }
 
 int stringToColor(char* str){
@@ -110,14 +105,6 @@ char stringToPiece(char* str, int color){
 	return piece;
 }
 
-void updateKingPosition(int player, int x, int y){
-	int piece = Board_getPiece(board, x, y);
-	if (toBlack(piece) == Board_BLACK_KING){
-		kingX[player] = x;
-		kingY[player] = y;
-	}
-}
-
 int removePiece(char* command){
 	int x, y;
 	char tile[6];
@@ -129,10 +116,8 @@ int removePiece(char* command){
 		return -2;
 	}
 	
-	char piece = Board_getPiece(board, x, y);
+	char piece = Board_removePiece(board, x, y);
 	PieceCounter_update(counter, piece, -1, x, y);
-	
-	Board_removePiece(board, x, y);
 	return 0;
 }
 
@@ -163,7 +148,7 @@ int setPiece(char* command){
 	PieceCounter_update(counter, piece, 1, x, y);
 	
 	Board_setPiece(board, x, y, piece);
-	updateKingPosition(color, x, y);
+	Board_updateKingPosition(board, x, y);
 	return 0;
 }
 
@@ -276,7 +261,7 @@ int movePiece(char* command){
 		return -5;
 	}
 	
-	if(pieceIsPawn(board, fromX, fromY) && Board_isFurthestRowForPlayer(turn, toY) && promoteTo == 0){
+	if(pieceIsPawn(fromX, fromY) && Board_isFurthestRowForPlayer(turn, toY) && promoteTo == 0){
 		promoteTo = (turn = WHITE)? 'q':'Q';        //default promotion
 	}
 	
@@ -305,7 +290,6 @@ int movePiece(char* command){
 	Board_print(board);
 	PossibleMove_free(move);
 	PossibleMoveList_free(possibleMoves);
-	updateKingPosition(turn, toX, toY);
 	turn = !turn;
 	return 0;
 }
@@ -401,7 +385,7 @@ struct PossibleMove* minimax(struct PossibleMove* possibleMove, int depth, int p
 	if (depth == 0){
 		return possibleMove;
 	}
-	char** board = possibleMove->board;
+	Board* board = possibleMove->board;
 	struct LinkedList* possibleMoves = Board_getPossibleMoves(board, player);
 	if (LinkedList_length(possibleMoves) == 0){
 		LinkedList_free(possibleMoves);
@@ -474,7 +458,7 @@ int main(){
 	Board_print(board);
 	printf("Enter game settings:\n");
 	while (1){
-		if (Board_isInCheck(board, kingX[turn], kingY[turn])){
+		if (Board_isInCheck(board, turn)){
 			printf("Check!\n");
 		}
 		humanTurn(turn);

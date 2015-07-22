@@ -5,7 +5,7 @@ struct LinkedList* PossibleMoveList_new();
 
 struct PossibleMove* PossibleMoveList_first(struct LinkedList* list);
 
-int PossibleMoveList_add(struct LinkedList*, int, int, int, int, char, char**);
+int PossibleMoveList_add(struct LinkedList*, int, int, int, int, char, Board*);
 
 void PossibleMoveList_print(struct LinkedList* list);
 

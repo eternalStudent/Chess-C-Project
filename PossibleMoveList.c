@@ -16,7 +16,8 @@ struct PossibleMove* PossibleMoveList_first(struct LinkedList* list){
 	return (struct PossibleMove*)LinkedList_first(list);
 }
 
-int PossibleMoveList_add(struct LinkedList* list, int fromX, int fromY, int toX, int toY, char promoteTo, char** board){
+int PossibleMoveList_add(struct LinkedList* list, int fromX, int fromY, 
+		int toX, int toY, char promoteTo, Board* board){
 	struct PossibleMove* move = PossibleMove_new(fromX, fromY, toX, toY, promoteTo, board);
 	if (!move){
 		return -1;

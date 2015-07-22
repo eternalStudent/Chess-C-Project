@@ -18,38 +18,39 @@
 #define BLACK 0
 #define WHITE 1
 
-char** Board_new();
+
+Board* Board_new();
 
 int Board_isFurthestRowForPlayer (int player, int y);
 
-void Board_init      (char** board);
+void Board_init      (Board* board);
 
-void Board_clear     (char** board);
+void Board_clear     (Board* board);
 
-void Board_copy      (char** dest, char** src);
+void Board_copy      (Board* dest, Board* src);
 
-void Board_setPiece  (char** board, int x, int y, char piece);
+void Board_setPiece  (Board* board, int x, int y, char piece);
 
-char Board_getPiece  (char** board, int x, int y);
+char Board_getPiece  (Board* board, int x, int y);
 
-char Board_remove    (char** board, int x, int y);
+char Board_remove    (Board* board, int x, int y);
 
-int  Board_isEmpty   (char** board, int x, int y);
+int  Board_isEmpty   (Board* board, int x, int y);
 
 int  Board_isInRange (int x, int y);
 
-int  Board_isPlayable(char** board, int counter[2][7]);
+int  Board_isPlayable(Board* board, int counter[2][7]);
 
-void Board_update    (char** board, struct PossibleMove* move);
+void Board_update    (Board* board, struct PossibleMove* move);
 
-char** Board_getPossibleBoard(char** board, struct PossibleMove* move);
+Board* Board_getPossibleBoard(Board* board, struct PossibleMove* move);
 
-int  Board_evalPiece (char** board, int x, int y, int color);
+int  Board_evalPiece (Board* board, int x, int y, int color);
 
-int  Board_getScore  (char** board, int color);
+int  Board_getScore  (Board* board, int color);
 
-struct LinkedList* Board_getPossibleMoves(char** board, int player);
+struct LinkedList* Board_getPossibleMoves(Board* board, int player);
 
-void Board_print     (char** board);
+void Board_print     (Board* board);
 
-void Board_free      (char** board);
+void Board_free      (Board* board);

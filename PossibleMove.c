@@ -10,7 +10,7 @@
  *          board - the board before the move
  * @return: NULL if any allocation errors occurred, the structure otherwise
  */
-struct PossibleMove* PossibleMove_new(int fromX, int fromY, int toX, int toY, char promoteTo, char** board){
+struct PossibleMove* PossibleMove_new(int fromX, int fromY, int toX, int toY, char promoteTo, Board* board){
 	struct PossibleMove* move;
 	move = (struct PossibleMove*)calloc(1, sizeof(struct PossibleMove));
 	if (!move){
@@ -72,7 +72,7 @@ struct PossibleMove* PossibleMove_clone (struct PossibleMove* move){
 	clone->toY = move->toY;
 	clone->promotion = move->promotion;
 	
-	char** boardClone = Board_new();
+	Board* boardClone = Board_new();
 	if (!boardClone){
 		free(clone);
 		return NULL;

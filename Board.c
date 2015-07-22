@@ -7,13 +7,18 @@
  *
  * @return:  NULL if an allocation error occurred, the new board structured as a two-dimensional char array otherwise
  */
-char** Board_new(){
-	char** board = calloc(Board_SIZE, sizeof(char*));
+Board* Board_new(){
+	Board* board = (Board*)calloc(1, sizeof(Board));
 	if (!board){
 		return NULL;
 	}
+	board->matrix = calloc(Board_SIZE, sizeof(char*));
+	if (!board->matrix){
+		free(board);
+		return NULL;
+	}
 	for(int i = 0; i < Board_SIZE; i++){
-		board[i] = calloc(Board_SIZE, sizeof(char));
+		board->matrix[i] = calloc(Board_SIZE, sizeof(char));
 	}
 	return board;
 }
@@ -36,7 +41,7 @@ int Board_isFurthestRowForPlayer (int player, int y){
 /*
  * Populates the board in the standard way.
  */
-void Board_init(char** board){
+void Board_init(Board* board){
 	for (int x = 1; x <= Board_SIZE; x++){
 		Board_setPiece(board, x, 2, Board_WHITE_PAWN);
 		Board_setPiece(board, x, 7, Board_BLACK_PAWN);
@@ -62,15 +67,19 @@ void Board_init(char** board){
 			Board_setPiece(board, x, y, Board_EMPTY);
 		}
 	}
+	board->kingX[BLACK] = 4;
+	board->kingX[WHITE] = 4;
+	board->kingY[BLACK] = 8;
+	board->kingY[WHITE] = 1;
 }
 
 /*
  * Clears the board from all pieces.
  */
-void Board_clear(char** board){
+void Board_clear(Board* board){
 	for (int x = 0; x < Board_SIZE; x++){
 		for (int y = 0; y < Board_SIZE; y++){
-			board[x][y] = Board_EMPTY;
+			board->matrix[x][y] = Board_EMPTY;
 		}
 	}	
 }
@@ -81,12 +90,16 @@ void Board_clear(char** board){
  * @params: (dest) - a pointer to the board to be populated, 
  *          (src)  - a pointer to the board according to whom (dest) will be populated
  */
-void Board_copy(char** dest, char** src){
+void Board_copy(Board* dest, Board* src){
 	for (int x = 0; x < Board_SIZE; x++){
 		for (int y = 0; y < Board_SIZE; y++){
-			dest[x][y] = src[x][y];
+			dest->matrix[x][y] = src->matrix[x][y];
 		}
 	}
+	dest->kingX[BLACK] = src->kingX[BLACK];
+	dest->kingX[WHITE] = src->kingX[WHITE];
+	dest->kingY[BLACK] = src->kingY[BLACK];
+	dest->kingY[WHITE] = src->kingY[WHITE];
 }
 
 /*
@@ -95,8 +108,8 @@ void Board_copy(char** dest, char** src){
  * @params: (x, y)  - the coordinates of the position to be populated
  *          (piece) - the piece to be placed on the board.
  */
-void Board_setPiece(char** board, int x, int y, char piece){
-	board[x-1][y-1] = piece;
+void Board_setPiece(Board* board, int x, int y, char piece){
+	board->matrix[x-1][y-1] = piece;
 }
 
 /*
@@ -105,8 +118,8 @@ void Board_setPiece(char** board, int x, int y, char piece){
  * @params: (x, y)  - the coordinates of the position from which to retrieve the piece
  * @return: the piece in the specified position
  */
-char Board_getPiece(char** board, int x, int y){
-	return board[x-1][y-1];
+char Board_getPiece(Board* board, int x, int y){
+	return board->matrix[x-1][y-1];
 }
 
 /*
@@ -115,9 +128,9 @@ char Board_getPiece(char** board, int x, int y){
  * @params: (x, y) - the coordinates of the position from which the piece will be removed
  * @return: the removed piece
  */
-char Board_removePiece(char** board, int x, int y){
+char Board_removePiece(Board* board, int x, int y){
 	char piece = Board_getPiece(board, x, y);
-	board[x-1][y-1] = Board_EMPTY;
+	board->matrix[x-1][y-1] = Board_EMPTY;
 	return piece;
 }
 
@@ -140,8 +153,8 @@ int Board_isInRange(int x, int y){
  * @params: (x, y) - the coordinates to be checked
  * @return: 1 (true) if the coordinates correspond to an empty tile on the board, 0 (false) otherwise
  */
-int Board_isEmpty(char** board, int x, int y){
-	return board[x-1][y-1] == Board_EMPTY;
+int Board_isEmpty(Board* board, int x, int y){
+	return board->matrix[x-1][y-1] == Board_EMPTY;
 }
 
 /*
@@ -151,21 +164,44 @@ int Board_isEmpty(char** board, int x, int y){
 			(pieceCounters) - the counters that keep track of how many pieces of each kind are on the board
  * @return: 1 (true) if the board is playable, 0 (false) otherwise
  */
-int Board_isPlayable(char** board, int counter[2][7]){
+int Board_isPlayable(Board* board, int counter[2][7]){
 	return counter[BLACK][6] && counter[WHITE][6];
+}
+
+/*
+ * Determines the color of a piece in a given position.
+ *
+ * @params: (x, y) the coordinates of the given position
+ * @return: -1 if the position is empty, the color of the piece otherwise
+ */
+static int Board_getColor(Board* board, int x, int y){
+	if (Board_isEmpty(board, x, y)){
+		return -1;
+	}
+	char piece = Board_getPiece(board, x, y);
+	return piece == toupper(piece)? BLACK: WHITE;
+}
+
+void Board_updateKingPosition(Board* board, int x, int y){
+	int piece = Board_getPiece(board, x, y);
+	int player = Board_getColor(board, x, y);
+	if (toupper(piece) == Board_BLACK_KING){
+		board->kingX[player] = x;
+		board->kingY[player] = y;
+	}
 }
 
 /*
  * Moves a piece to a different tile in the board.
  *
- * @params: (oldX, oldY) - the coordinates of the piece to be moved
- *          (newX, newY) - the coordinates the piece will be moved to
+ * @params: (fromX, fromY) - the coordinates of the piece to be moved
+ *          (toX, toY) - the coordinates the piece will be moved to
  */
-static int Board_move(char** board, int oldX, int oldY, int newX, int newY){
-	char piece = Board_getPiece(board, oldX, oldY);
-	Board_removePiece(board, oldX, oldY);
-	Board_setPiece(board, newX, newY, piece);
-	return 0;
+static void Board_move(Board* board, int fromX, int fromY, int toX, int toY){
+	char piece = Board_getPiece(board, fromX, fromY);
+	Board_removePiece(board, fromX, fromY);
+	Board_setPiece(board, toX, toY, piece);
+	Board_updateKingPosition(board, toX, toY);
 }
 
 /*
@@ -173,7 +209,7 @@ static int Board_move(char** board, int oldX, int oldY, int newX, int newY){
  *
  * @params: (move) - the move to be carried out on the board 
  */
-void Board_update(char** board, struct PossibleMove* move){
+void Board_update(Board* board, struct PossibleMove* move){
 	Board_move(board, move->fromX, move->fromY, move->toX, move->toY);
 	if (move->promotion != 0){
 		Board_setPiece(board, move->toX, move->toY, move->promotion);
@@ -186,8 +222,8 @@ void Board_update(char** board, struct PossibleMove* move){
  * @params: (possibleMove) - a pointer to the move to be carried out.
  * @return: NULL if any allocation errors occurred, the new board otherwise
  */
-char** Board_getPossibleBoard(char** board, struct PossibleMove* possibleMove){
-	char** possibleBoard = Board_new();
+Board* Board_getPossibleBoard(Board* board, struct PossibleMove* possibleMove){
+	Board* possibleBoard = Board_new();
 	if (!possibleBoard){
 		return NULL;
 	}
@@ -202,7 +238,7 @@ char** Board_getPossibleBoard(char** board, struct PossibleMove* possibleMove){
  * @params: (x,y) - the coordinates of the piece to be evaluated
  *			(color) - the color of the player the scoring function is adjusted for.
  */
-int Board_evalPiece(char** board, int x, int y, int player){
+int Board_evalPiece(Board* board, int x, int y, int player){
 	char piece = Board_getPiece(board, x, y);
 	int value = 0;
 	switch (piece){
@@ -226,25 +262,11 @@ int Board_evalPiece(char** board, int x, int y, int player){
 }
 
 /*
- * Determines the color of a piece in a given position.
- *
- * @params: (x, y) the coordinates of the given position
- * @return: -1 if the position is empty, the color of the piece otherwise
- */
-static int Board_getColor(char** board, int x, int y){
-	if (Board_isEmpty(board, x, y)){
-		return -1;
-	}
-	char piece = Board_getPiece(board, x, y);
-	return piece == toupper(piece)? BLACK: WHITE;
-}
-
-/*
  * Evaluates the board according to the specified scoring function.
  *
  * @return: a numeric evaluation of the board
  */
-int Board_getScore(char** board, int player){
+int Board_getScore(Board* board, int player){
 	int score = 0;
 	for (int x = 1; x <= Board_SIZE; x++){
 		for (int y = 1; y <= Board_SIZE; y++){
@@ -254,14 +276,10 @@ int Board_getScore(char** board, int player){
 	return score;
 }
 
-static struct LinkedList* getPawnMoves(char** board, int fromX, int fromY){
+static struct LinkedList* getPawnMoves(Board* board, int fromX, int fromY){
 	int player = Board_getColor(board, fromX, fromY);
-	char promotionOptions[4];
-	promotionOptions[0] = (player == WHITE)? 'q':'Q';
-	promotionOptions[1] = (player == WHITE)? 'b':'B';
-	promotionOptions[2] = (player == WHITE)? 'n':'N';
-	promotionOptions[3] = (player == WHITE)? 'r':'R';
-	
+	char* promotionOptions = (player == WHITE)? 
+			(char[4]){'q', 'b', 'n', 'r'}: (char[4]){'Q', 'B', 'N', 'R'};
 	struct LinkedList* possibleMoves = PossibleMoveList_new();
 	
 	if (!possibleMoves){
@@ -291,10 +309,10 @@ static struct LinkedList* getPawnMoves(char** board, int fromX, int fromY){
 				if (PossibleMoveList_add(possibleMoves, fromX, fromY, toX, toY, 0, board) != 0){
 					PossibleMoveList_free(possibleMoves);
 					return NULL;
-					}
 				}
 			}
 		}
+	}
 	return possibleMoves;
 }
 
@@ -305,7 +323,7 @@ static struct LinkedList* getPawnMoves(char** board, int fromX, int fromY){
  * @return: -1 if the given position is occupied or out of range, 
  *           0 otherwise
  */
-int addMoveIfLegal(struct LinkedList* possibleMoves, char** board, 
+int addMoveIfLegal(struct LinkedList* possibleMoves, Board* board, 
 			int fromX, int fromY, int sideward, int forward){
 	int player = Board_getColor(board, fromX, fromY);
 	int toX = fromX+sideward;
@@ -323,7 +341,7 @@ int addMoveIfLegal(struct LinkedList* possibleMoves, char** board,
 	return 0;
 }
 
-static struct LinkedList* getBishopMoves(char** board, int fromX, int fromY){
+static struct LinkedList* getBishopMoves(Board* board, int fromX, int fromY){
 	struct LinkedList* possibleMoves = PossibleMoveList_new();
 	if (!possibleMoves){
 		return NULL;
@@ -341,7 +359,7 @@ static struct LinkedList* getBishopMoves(char** board, int fromX, int fromY){
 	return possibleMoves;
 }
 
-static struct LinkedList* getRookMoves(char** board, int fromX, int fromY){
+static struct LinkedList* getRookMoves(Board* board, int fromX, int fromY){
 	struct LinkedList* possibleMoves = PossibleMoveList_new();
 	if (!possibleMoves){
 		return NULL;
@@ -365,7 +383,7 @@ static struct LinkedList* getRookMoves(char** board, int fromX, int fromY){
 	return possibleMoves;
 }
 
-static struct LinkedList* getQueenMoves(char** board, int fromX, int fromY){
+static struct LinkedList* getQueenMoves(Board* board, int fromX, int fromY){
 	struct LinkedList* possibleMoves1;
 	struct LinkedList* possibleMoves2;
 	possibleMoves1 = getBishopMoves(board, fromX, fromY);
@@ -382,7 +400,7 @@ static struct LinkedList* getQueenMoves(char** board, int fromX, int fromY){
 	return possibleMoves1;
 }
 
-static struct LinkedList* getKnightMoves(char** board, int fromX, int fromY){
+static struct LinkedList* getKnightMoves(Board* board, int fromX, int fromY){
 	struct LinkedList* possibleMoves = PossibleMoveList_new();
 	if (!possibleMoves){
 		return NULL;
@@ -400,7 +418,7 @@ static struct LinkedList* getKnightMoves(char** board, int fromX, int fromY){
 	return possibleMoves;
 }
 
-static struct LinkedList* getKingMoves(char** board, int fromX, int fromY){
+static struct LinkedList* getKingMoves(Board* board, int fromX, int fromY){
 	struct LinkedList* possibleMoves = PossibleMoveList_new();
 	if (!possibleMoves){
 		return NULL;
@@ -413,7 +431,7 @@ static struct LinkedList* getKingMoves(char** board, int fromX, int fromY){
 	return possibleMoves;
 }
 
-struct LinkedList* Board_getPossibleMovesOfPiece(char** board, int x, int y){
+struct LinkedList* Board_getPossibleMovesOfPiece(Board* board, int x, int y){
 	char piece = Board_getPiece(board, x, y);
 	switch (piece){
 		case Board_BLACK_PAWN:
@@ -439,7 +457,7 @@ struct LinkedList* Board_getPossibleMovesOfPiece(char** board, int x, int y){
  * @params: (player) - the player whose moves are to be put in the list
  * @return: a list of all moves currently possible for the player, or NULL if any allocation errors occurred 
  */
-struct LinkedList* Board_getPossibleMoves(char** board, int player){
+struct LinkedList* Board_getPossibleMoves(Board* board, int player){
 	struct LinkedList* possibleMoves = PossibleMoveList_new();
 	if (!possibleMoves){
 		return NULL;
@@ -461,14 +479,13 @@ struct LinkedList* Board_getPossibleMoves(char** board, int player){
 }
 
 
-int Board_isInCheck(char** board, int kingX, int kingY){
-	int player = Board_getColor(board, kingX, kingY);
+int Board_isInCheck(Board* board, int player){
 	struct LinkedList* opponentMoves = Board_getPossibleMoves(board, !player);
 	struct Iterator iterator;
 	Iterator_init(&iterator, opponentMoves);
 	while (Iterator_hasNext(&iterator)){
 		struct PossibleMove* opponentMove = (struct PossibleMove*)Iterator_next(&iterator);
-		if (kingX == opponentMove->toX && kingY == opponentMove->toY){
+		if (board->kingX[player] == opponentMove->toX && board->kingY[player] == opponentMove->toY){
 			PossibleMoveList_free(opponentMoves);
 			return 1;
 		}
@@ -491,13 +508,13 @@ static void printLine(){
 /*
  * Prints an ASCII representation of the board.
  */
-void Board_print(char** board){
+void Board_print(Board* board){
 
 	printLine();
 	for (int y = Board_SIZE-1; y >= 0 ; y--){
 		printf((y < 9? " %d": "%d"), y+1);
 		for (int x = 0; x < Board_SIZE; x++){
-			printf("| %c ", board[x][y]);
+			printf("| %c ", board->matrix[x][y]);
 		}
 		printf("|\n");
 		printLine();
@@ -512,9 +529,10 @@ void Board_print(char** board){
 /*
  * Frees the structure.
  */
-void Board_free(char** board){
+void Board_free(Board* board){
 	for(int i = 0; i < Board_SIZE; i++){
-		free(board[i]);
+		free(board->matrix[i]);
 	}
+	free(board->matrix);
 	free(board);
 }
