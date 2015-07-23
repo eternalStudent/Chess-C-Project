@@ -232,6 +232,9 @@ int movePiece(char* command){
 
 	sscanf(command, "move %5s to %5s %6s", fromTile, toTile, promoteToAsString);
 	promoteTo = stringToPiece(promoteToAsString, turn);
+	if(!promoteTo){
+		return -1;
+	}
 	
 	int fromX, fromY, toX, toY;
 	if (readTile(fromTile, &fromX, &fromY) == -1 
@@ -279,6 +282,74 @@ int movePiece(char* command){
 	return 0;
 }
 
+int loadGame (char* command){
+	int updatedGameMode = 0;
+	char path[1024];
+	char buff[41];
+	sscanf(command, "%s %s", buff, path);
+	
+	FILE* gameFile = fopen(path, "r");
+	if (!gameFile){
+		return -9;
+	}
+	
+	while(fgets(buff, 40, gameFile) != 0){
+		if (strstr (buff, "<next_turn>")){
+			if (strstr(buff,"white")){
+				first = WHITE;
+			}
+			else{
+				first = BLACK;
+			}			
+		}
+		else if (strstr (buff, "<game_mode>")){
+			if (strstr(buff, "1")){
+				gameMode = 1;
+			}
+			else{
+				gameMode = 2;
+			}
+			updatedGameMode = 1;
+		}
+
+		else if (updatedGameMode && (gameMode == 2)){		
+			if (strstr (buff, "<difficulty>")){
+				if ((int)buff[13] <= 52){
+					char difficultyAsChar = buff[13];
+					int difficultyAsInt = (int)difficultyAsChar - 48;
+					maxRecursionDepth = difficultyAsInt;					
+				}			
+				else {
+					maxRecursionDepth = BEST;
+				}
+			}	
+			else if (strstr(buff, "<user_color>")){
+				if (strstr(buff, "white")){
+					player1 = WHITE;
+				}
+				else{
+					player1 = BLACK;
+				}
+			}
+		}
+		else if (strstr(buff, "row")){
+			int y = (int)buff[7] - 48;
+			for (int x = 1; x <= 8; x++){
+				char piece = buff[8+x];
+				if (piece != '_'){
+					Board_setPiece(&board, x, y, piece);
+				}
+				else{
+					Board_setPiece(&board, x, y, Board_EMPTY);
+				}
+			}
+		}
+	}
+	Board_print(&board);
+	fclose(gameFile);
+	return 0;
+}
+
 /*
  * Executes a command given by the user
  *
@@ -302,7 +373,7 @@ int executeCommand(char* command){
 			return setUserColor(command);
 		}
 		if (str_equals(str, "load")){
-			//return loadGame(command);
+			return loadGame(command);
 		}
 		if (str_equals(str, "clear")){
 			Board_clear(&board);
@@ -359,6 +430,7 @@ void printError(int error){
 		case -6: printf("Illegal move\n"); break;
 		case -7: printf("Wrong board initialization\n"); break;
 		case -8: printf("Setting this piece creates an invalid board\n"); break;
+		case -9: printf("Wrong file name\n"); break;
 	}
 }
 

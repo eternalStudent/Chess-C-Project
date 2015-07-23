@@ -5,7 +5,7 @@
 /*
  * Creates a new board structure.
  *
- * @return:  NULL if an allocation errors occurred, 
+ * @return:  NULL if an allocation error occurred, 
  *           a pointer to a new board otherwise
  */
 Board* Board_new(){
@@ -232,8 +232,8 @@ int Board_getScore(Board* board, int player){
 }
 
 static int canBeCapturedByAPawn(Board* board, int player){
-	char enemyPawn = player == BLACK? Board_WHITE_PAWN: Board_BLACK_PAWN;
-	int forward = player == BLACK? -1: 1;
+	char enemyPawn = (player == BLACK)? Board_WHITE_PAWN: Board_BLACK_PAWN;
+	int forward = (player == BLACK)? -1: 1;
 	int x = board->kingX[player];
 	int y = board->kingY[player];
 	for (int i = -1; i <= 1; i+=2){
@@ -247,7 +247,7 @@ static int canBeCapturedByAPawn(Board* board, int player){
 }
 
 static int canBeCapturedByAKnight(Board* board, int player){
-	char enemyKnight = player == BLACK? Board_WHITE_KNIGHT: Board_BLACK_KNIGHT;
+	char enemyKnight = (player == BLACK)? Board_WHITE_KNIGHT: Board_BLACK_KNIGHT;
 	int x = board->kingX[player];
 	int y = board->kingY[player];
 	for (int sideward = -1; sideward <= 1; sideward+=2){
@@ -549,7 +549,6 @@ static void printLine(){
  * Prints an ASCII representation of the board.
  */
 void Board_print(Board* board){
-
 	printLine();
 	for (int y = Board_SIZE-1; y >= 0 ; y--){
 		printf((y < 9? " %d": "%d"), y+1);
