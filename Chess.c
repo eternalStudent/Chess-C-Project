@@ -229,18 +229,21 @@ int movePiece(char* command){
 	char toTile[6];
 	char promoteToAsString[7];
 	char promoteTo;
-
-	sscanf(command, "move %5s to %5s %6s", fromTile, toTile, promoteToAsString);
-	promoteTo = stringToPiece(promoteToAsString, turn);
-	if(!promoteTo){
-		return -1;
-	}
 	
+	sscanf(command, "move %5s to %5s %6s", fromTile, toTile, promoteToAsString);
 	int fromX, fromY, toX, toY;
 	if (readTile(fromTile, &fromX, &fromY) == -1 
 			|| readTile(toTile, &toX, &toY) == -1){
 		return -1;
 	}
+
+	promoteTo = stringToPiece(promoteToAsString, turn);
+	if((!promoteTo && (int)promoteToAsString[0] > 32) || 
+		(promoteTo && (!Board_isFurthestRowForPlayer(turn, toY) || 
+		!pieceIsPawn(fromX, fromY)))){ 
+		return -1;
+	}
+	
 	if (!Board_isInRange(fromX, fromY) 
 			|| !Board_isInRange(toX, toY)){
 		return -2;
@@ -286,7 +289,7 @@ int loadGame (char* command){
 	int updatedGameMode = 0;
 	char path[1024];
 	char buff[41];
-	sscanf(command, "%s %s", buff, path);
+	sscanf(command, "%4s %1023s", buff, path);
 	
 	FILE* gameFile = fopen(path, "r");
 	if (!gameFile){
@@ -350,6 +353,69 @@ int loadGame (char* command){
 	return 0;
 }
 
+int saveGame (char* command){
+	char fileName[1024];
+	char buff[4];
+	sscanf(command, "%4s %1023s", buff, fileName);
+	if (!strstr(fileName, ".xml")){
+		return -9;
+	}
+	
+	FILE* gameFile = fopen(fileName, "w");
+	if (!gameFile){
+		return -9;
+	}
+	
+	fputs("<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<game>\n\t<next_turn>", gameFile);
+	char* nextTurn = (turn == WHITE)? "white":"black";
+	fputs(nextTurn, gameFile);
+	fputs("</next_turn>\n\t<game_mode>", gameFile);
+	char gameModeAsChar = (char)(gameMode + 48);
+	fputc(gameModeAsChar,gameFile);
+	fputs("</game_mode>\n\t<difficulty>", gameFile);
+	if (gameMode == 2){
+		if (maxRecursionDepth == BEST){
+			fputs("best", gameFile);
+		}
+		else{
+			char difficultyAsChar = (char)(maxRecursionDepth + 48);
+			fputc(difficultyAsChar, gameFile);
+		}
+	}
+	fputs("</difficulty>\n\t<user_color>", gameFile);
+	if (gameMode == 2){
+		char* userColor = (player1 == WHITE)? "white":"black";
+		fputs(userColor, gameFile);
+	}
+	fputs("</user_color>\n\t<board>\n\t\t", gameFile);
+	for(int y = 8; y >= 1; y--){
+		fprintf(gameFile, "<row_%d>", y);
+		for (int x = 1; x <= 8; x++){
+			char newPiece = Board_getPiece(&board, x, y);
+			if (newPiece == Board_EMPTY){
+				fputc('_', gameFile);
+			}
+			else{ 
+				fputc(newPiece, gameFile);
+			}
+		}
+		if (y != 1){
+			fprintf(gameFile, "</row_%d>\n\t\t", y);
+		}
+		else{
+			fprintf(gameFile, "</row_%d>\n\t</board>\n</game>", y);
+		}
+	}
+
+	if (ferror(gameFile)){  //handles failure to save. Not specified in the project, thought this should exist
+		fclose(gameFile);
+		return -10;
+	}
+	
+	fclose(gameFile);
+	return 0;
+}
+	
 /*
  * Executes a command given by the user
  *
@@ -409,6 +475,9 @@ int executeCommand(char* command){
 		if (str_equals(str, "move")){
 			return movePiece(command);
 		}
+		if (str_equals(str,"save")){
+			return saveGame(command);
+		}
 	}
 	return -1;
 }
@@ -431,6 +500,7 @@ void printError(int error){
 		case -7: printf("Wrong board initialization\n"); break;
 		case -8: printf("Setting this piece creates an invalid board\n"); break;
 		case -9: printf("Wrong file name\n"); break;
+		case -10:printf("Saving failed, please try again\n"); break;
 	}
 }
 
