@@ -298,7 +298,7 @@ int loadGame (char* command){
 	
 	while(fgets(buff, 40, gameFile) != 0){
 		if (strstr (buff, "<next_turn>")){
-			if (strstr(buff,"white")){
+			if (strstr(buff,"White")){
 				first = WHITE;
 			}
 			else{
@@ -321,17 +321,20 @@ int loadGame (char* command){
 					char difficultyAsChar = buff[13];
 					int difficultyAsInt = (int)difficultyAsChar - 48;
 					maxRecursionDepth = difficultyAsInt;					
-				}			
+				}
+				else if (buff[13] == '<'){
+					maxRecursionDepth = 1; //default value
+				}
 				else {
 					maxRecursionDepth = BEST;
 				}
 			}	
 			else if (strstr(buff, "<user_color>")){
-				if (strstr(buff, "white")){
-					player1 = WHITE;
+				if (strstr(buff, "Black")){
+					player1 = BLACK;
 				}
 				else{
-					player1 = BLACK;
+					player1 = WHITE;
 				}
 			}
 		}
@@ -366,37 +369,29 @@ int saveGame (char* command){
 		return -9;
 	}
 	
-	fputs("<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<game>\n\t<next_turn>", gameFile);
-	char* nextTurn = (turn == WHITE)? "white":"black";
-	fputs(nextTurn, gameFile);
-	fputs("</next_turn>\n\t<game_mode>", gameFile);
+	char* nextTurn = (turn == WHITE)? "White":"Black";
 	char gameModeAsChar = (char)(gameMode + 48);
-	fputc(gameModeAsChar,gameFile);
-	fputs("</game_mode>\n\t<difficulty>", gameFile);
+	char* userColor = "";
+	char* difficultyString = "";
 	if (gameMode == 2){
-		if (maxRecursionDepth == BEST){
-			fputs("best", gameFile);
-		}
-		else{
-			char difficultyAsChar = (char)(maxRecursionDepth + 48);
-			fputc(difficultyAsChar, gameFile);
-		}
+		userColor = (player1 == WHITE)? "White":"Black";
+		char difficultyAsChar = (char)(maxRecursionDepth + 48);
+		difficultyString = (maxRecursionDepth == BEST)? "best" : &difficultyAsChar;
 	}
-	fputs("</difficulty>\n\t<user_color>", gameFile);
-	if (gameMode == 2){
-		char* userColor = (player1 == WHITE)? "white":"black";
-		fputs(userColor, gameFile);
-	}
-	fputs("</user_color>\n\t<board>\n\t\t", gameFile);
+	
+	fprintf(gameFile, "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<game>\n\t<next_turn>%s" 
+				      "</next_turn>\n\t<game_mode>%c</game_mode>\n\t<difficulty>%s</difficulty>\n\t<user_color>"
+					  "%s</user_color>\n\t<board>\n\t\t", nextTurn, gameModeAsChar, difficultyString, userColor);
+	
 	for(int y = 8; y >= 1; y--){
 		fprintf(gameFile, "<row_%d>", y);
 		for (int x = 1; x <= 8; x++){
 			char newPiece = Board_getPiece(&board, x, y);
 			if (newPiece == Board_EMPTY){
-				fputc('_', gameFile);
+				fprintf(gameFile,"_");
 			}
 			else{ 
-				fputc(newPiece, gameFile);
+				fprintf(gameFile, "%c", newPiece);
 			}
 		}
 		if (y != 1){
@@ -407,7 +402,7 @@ int saveGame (char* command){
 		}
 	}
 
-	if (ferror(gameFile)){  //handles failure to save. Not specified in the project, thought this should exist
+	if (ferror(gameFile)){
 		fclose(gameFile);
 		return -10;
 	}
@@ -500,7 +495,7 @@ void printError(int error){
 		case -7: printf("Wrong board initialization\n"); break;
 		case -8: printf("Setting this piece creates an invalid board\n"); break;
 		case -9: printf("Wrong file name\n"); break;
-		case -10:printf("Saving failed, please try again\n"); break;
+		case -10:printf("Error: standard function fprintf has failed\n"); break;
 	}
 }
 
