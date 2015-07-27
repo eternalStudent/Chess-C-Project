@@ -147,6 +147,13 @@ static int Board_getColor(Board* board, int x, int y){
 	return piece == toupper(piece)? BLACK: WHITE;
 }
 
+/*
+ * Updates the player's king's position in the kingX and kingY arrays, 
+ * who keep track of both kings and are part of the board structure. 
+ *
+ * @params: (borad) - the board struct for which the arrays are to be updated
+ *			(x, y) the coordinates of the given position
+ */
 void Board_updateKingPosition(Board* board, int x, int y){
 	int piece = Board_getPiece(board, x, y);
 	int player = Board_getColor(board, x, y);
@@ -231,12 +238,19 @@ int Board_getScore(Board* board, int player){
 	return score;
 }
 
+/*
+ * Checks if the player's king can be captured by an enemy pawn.
+ * @params: (board) - the board to be checked
+ *		    (player) - the player whose king is checked for possible captures
+ *
+ * @return: 1 if the player's king can be captured by an enemy pawn, 0 otherwise
+ */
 static int canBeCapturedByAPawn(Board* board, int player){
 	char enemyPawn = (player == BLACK)? Board_WHITE_PAWN: Board_BLACK_PAWN;
-	int forward = (player == BLACK)? -1: 1;
+	int forward = (player == BLACK)? -1 : 1;
 	int x = board->kingX[player];
 	int y = board->kingY[player];
-	for (int i = -1; i <= 1; i+=2){
+	for (int i = -1; i <= 1; i += 2){
 		if (Board_isInRange(x+i, y+forward)){
 			if (Board_getPiece(board, x+i, y+forward) == enemyPawn){
 				return 1;
@@ -246,6 +260,13 @@ static int canBeCapturedByAPawn(Board* board, int player){
 	return 0;
 }
 
+/*
+ * Checks if the player's king can be captured by an enemy knight.
+ * @params: (board) - the board to be checked
+ *		    (player) - the player whose king is checked for possible captures
+ *
+ * @return: 1 if the player's king can be captured by an enemy knight, 0 otherwise
+ */
 static int canBeCapturedByAKnight(Board* board, int player){
 	char enemyKnight = (player == BLACK)? Board_WHITE_KNIGHT: Board_BLACK_KNIGHT;
 	int x = board->kingX[player];
@@ -271,6 +292,13 @@ static int canBeCapturedByAKnight(Board* board, int player){
 	return 0;
 }
 
+/*
+ * Checks if the player's king can be captured by an enemy bishop, rook or queen.
+ * @params: (board) - the board to be checked
+ *		    (player) - the player whose king is checked for possible captures
+ *
+ * @return: 1 if the player's king can be captured by an enemy knight, 0 otherwise
+ */
 static int canBeCapturedByABishopRookOrQueen(Board* board, int player){
 	for (int sideward = -1; sideward <= 1; sideward++){
 		for (int forward = -1; forward <= 1; forward++){
@@ -302,11 +330,26 @@ static int canBeCapturedByABishopRookOrQueen(Board* board, int player){
 	return 0;
 }
 
+/*
+ * Checks if the player's king can be captured by the other player's king.
+ * @params: (board) - the board to be checked
+ *		    (player) - the player whose king is checked for possible captures
+ *
+ * @return: 1 if the player's king can be captured by the other player's king, 0 otherwise
+ */
 static int canBeCapturedByAKing(Board* board){
 	return (abs(board->kingX[BLACK]-board->kingX[WHITE]) <= 1)
 		&& (abs(board->kingY[BLACK]-board->kingY[WHITE]) <= 1);
 }
 
+/*
+ * Checks if the board is now in "check" for a given player,
+ * by checking whether their king is at risk of being captured.
+ * @params: (board) - the board to be checked
+ *		    (player) - the player whose king is checked for possible captures
+ *
+ * @return: 1 if the player's king can be captured by an enemy piece, 0 otherwise
+ */
 int Board_isInCheck(Board* board, int player){
 	return canBeCapturedByAPawn(board, player)
 		|| canBeCapturedByAKnight(board, player)
@@ -318,7 +361,7 @@ int Board_isInCheck(Board* board, int player){
  * Checks if a given row is the furthest row for the given player.
  *
  * @params: (player) - the relevant player
-			(y) - the relevant row number
+ *			(y) - the relevant row number
  *
  * @return: 1 if (y) is the furthest row for (player), 0 otherwise 
  */
@@ -329,6 +372,14 @@ int Board_isFurthestRowForPlayer (int player, int y){
 	return 0;
 }
 
+/*
+ * Gets all possible moves for a given pawn piece on a given board.
+ * 
+ * @params: (board) - a pointer to the relevant board
+ *          (fromX, fromY) - location of the relevant pawn on (board)
+ *
+ * @return: A list of all possible moves for the relevant pawn.
+ */
 static struct LinkedList* getPawnMoves(Board* board, int fromX, int fromY){
 	int player = Board_getColor(board, fromX, fromY);
 	char* promotionOptions = (player == WHITE)? 
@@ -348,7 +399,7 @@ static struct LinkedList* getPawnMoves(Board* board, int fromX, int fromY){
 		}
 		
 		int canMoveForward = Board_isEmpty(board, toX, toY) && sideward == 0;
-		int canCapture = Board_getColor(board, toX, toY) == !player && sideward != 0;
+		int canCapture = (Board_getColor(board, toX, toY) == !player) && (sideward != 0);
 		if (canMoveForward || canCapture){
 			if (Board_isFurthestRowForPlayer(player, toY)){	//generate all possible promotions	
 				for (int i = 0; i <= 3; i++){
@@ -370,8 +421,8 @@ static struct LinkedList* getPawnMoves(Board* board, int fromX, int fromY){
 }
 
 /*
- * Adds a single possible move from (fromX, fromY) to (fromX+sideward, fromY+forward) if 
- * this move is legal.
+ * Adds a single possible move from (fromX, fromY) to (fromX+sideward, fromY+forward)
+ * to (possibleMoves) if  this move is legal.
  *
  * @return: -1 if the given position is occupied or out of range, 
  *           0 otherwise
@@ -397,6 +448,11 @@ int addMoveIfLegal(struct LinkedList* possibleMoves, Board* board,
 	return 0;
 }
 
+/*
+ * Gets all possible moves for a given bishop piece on a given board.
+ *
+ * @return: A list of all possible moves for a bishop located at (fromX, fromY) on (board)       
+ */
 static struct LinkedList* getBishopMoves(Board* board, int fromX, int fromY){
 	struct LinkedList* possibleMoves = PossibleMoveList_new();
 	if (!possibleMoves){
@@ -415,6 +471,11 @@ static struct LinkedList* getBishopMoves(Board* board, int fromX, int fromY){
 	return possibleMoves;
 }
 
+/*
+ * Gets all possible moves for a given rook piece on a given board.
+ *
+ * @return: A list of all possible moves for a rook located at (fromX, fromY) on (board)       
+ */
 static struct LinkedList* getRookMoves(Board* board, int fromX, int fromY){
 	struct LinkedList* possibleMoves = PossibleMoveList_new();
 	if (!possibleMoves){
@@ -439,6 +500,11 @@ static struct LinkedList* getRookMoves(Board* board, int fromX, int fromY){
 	return possibleMoves;
 }
 
+/*
+ * Gets all possible moves for a given queen piece on a given board.
+ *
+ * @return: A list of all possible moves for a queen located at (fromX, fromY) on (board)       
+ */
 static struct LinkedList* getQueenMoves(Board* board, int fromX, int fromY){
 	struct LinkedList* possibleMoves1;
 	struct LinkedList* possibleMoves2;
@@ -456,6 +522,11 @@ static struct LinkedList* getQueenMoves(Board* board, int fromX, int fromY){
 	return possibleMoves1;
 }
 
+/*
+ * Gets all possible moves for a given knight piece on a given board.
+ *
+ * @return: A list of all possible moves for a knight located at (fromX, fromY) on (board)       
+ */
 static struct LinkedList* getKnightMoves(Board* board, int fromX, int fromY){
 	struct LinkedList* possibleMoves = PossibleMoveList_new();
 	if (!possibleMoves){
@@ -474,6 +545,11 @@ static struct LinkedList* getKnightMoves(Board* board, int fromX, int fromY){
 	return possibleMoves;
 }
 
+/*
+ * Gets all possible moves for a given king piece on a given board.
+ *
+ * @return: A list of all possible moves for a king located at (fromX, fromY) on (board)       
+ */
 static struct LinkedList* getKingMoves(Board* board, int fromX, int fromY){
 	struct LinkedList* possibleMoves = PossibleMoveList_new();
 	if (!possibleMoves){
@@ -487,6 +563,11 @@ static struct LinkedList* getKingMoves(Board* board, int fromX, int fromY){
 	return possibleMoves;
 }
 
+/*
+ * General function for getting all possible moves for a given piece on a given board.
+ *
+ * @return: A list of all possible moves for a piece located at (fromX, fromY) on (board)       
+ */
 struct LinkedList* Board_getPossibleMovesOfPiece(Board* board, int x, int y){
 	char piece = Board_getPiece(board, x, y);
 	switch (piece){
@@ -505,7 +586,6 @@ struct LinkedList* Board_getPossibleMovesOfPiece(Board* board, int x, int y){
 	}
 	return PossibleMoveList_new();
 }
-
 
 /*
  * Main function for getting all of the moves currently possible for a player. 

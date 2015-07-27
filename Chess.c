@@ -35,11 +35,17 @@ void initialize(){
 	PieceCounter_setToMax(counter);
 }
 
+/*
+ * Handles allocation errors by printing the relevant message and exiting the program.
+ */
 void allocationFailed(){
 	fprintf(stderr, "Error: standard function calloc has failed\n");
 	exit(0);
 }
 
+/*
+ * Retrieves a position on the board (tile) from user input.
+ */
 int readTile(char* str, int* x, int* y){
 	char ch;
 	if (sscanf(str, "<%c,%1d>", &ch, y) < 0){
@@ -49,11 +55,18 @@ int readTile(char* str, int* x, int* y){
 	return 0;
 }
 
+/*
+ * @return: 1 if the piece located at (x,y) 
+ * 			on the main playing board is a pawn, 0 otherwise 
+ */
 int pieceIsPawn (int x, int y){
 	char piece = Board_getPiece(&board, x, y);
 	return toBlack(piece) == Board_BLACK_PAWN; 
 }
 
+/*
+ * Retrieves a color (black or white) from user input.
+ */
 int stringToColor(char* str){
 	if (str_equals(str, "black")){
 		return BLACK;
@@ -64,6 +77,12 @@ int stringToColor(char* str){
 	return -1;
 }
 
+/*
+ * Retrieves a piece type from user input.
+ * 
+ * @params: (str) - pointer to a user input string
+ *			(color) - the relevant player's color
+ */
 char stringToPiece(char* str, int color){
 	char piece = 0;
 	if (str_equals(str, "pawn")){
@@ -90,6 +109,13 @@ char stringToPiece(char* str, int color){
 	return piece;
 }
 
+/*
+ * Main function for handling the "rm" command for removing pieces from the board during the settings stage. 
+ *
+ * @return: -1 if the input tile was not formatted legally
+ *			-2 if the input tile is not a possible position on the board
+ *			 0 otherwise
+ */
 int removePiece(char* command){
 	int x, y;
 	char tile[6];
@@ -106,6 +132,15 @@ int removePiece(char* command){
 	return 0;
 }
 
+/*
+ * Main function for handling the "set" command for setting pieces on the board during the settings stage. 
+ *
+ * @return: -1 if the input tile, color or piece type were not formatted legally
+ *			-2 if the input tile is not a possible position on the board
+ *			-8 if the specified piece cannot be added there are already
+ *			   too many pieces of this type on the board
+ *			 0 otherwise
+ */
 int setPiece(char* command){
 	int x, y;
 	char tile[6];
@@ -137,6 +172,13 @@ int setPiece(char* command){
 	return 0;
 }
 
+/*
+ * Main function for handling the "game_mode" command for setting the game mode during the settings stage. 
+ *
+ * @return: -1 if the input was not formatted legally
+ *			-3 if a value other than 1 or 2 was input as game mode
+ *			 0 otherwise
+ */
 int setGameMode(char* command){
 	int mode;
 	if (sscanf(command, "game_mode %d", &mode) < 0){
@@ -157,6 +199,13 @@ int setGameMode(char* command){
 	return 0;
 }
 
+/*
+ * Main function for handling the "difficulty" command for setting the difficulty level during the settings stage. 
+ *
+ * @return: -1 if the input was not formatted legally or if the current game mode is not player vs. AI
+ *			-4 if an illegal number was input as the specified minimax depth
+ *			 0 otherwise
+ */
 int setDifficulty(char* command){
 	if (gameMode != 2){
 		return -1;
@@ -180,6 +229,13 @@ int setDifficulty(char* command){
 	return 0;
 }
 
+/*
+ * Main function for handling the "user_color" command for setting the human player's color during the settings stage.
+ * Using this command is legal only if playing in game mode 2 (player vs. AI). 
+ *
+ * @return: -1 if the input was not formatted legally or if the current game mode is not player vs. AI
+ *			 0 otherwise
+ */
 int setUserColor(char* command){
 	if (gameMode != 2){
 		return -1;
@@ -195,6 +251,12 @@ int setUserColor(char* command){
 	return 0;
 }
 
+/*
+ * Main function for handling the "next_player" command for setting who's turn is first during the settings stage.
+ *
+ * @return: -1 if the input was not formatted legally
+ *			 0 otherwise
+ */
 int setFirstPlayer(char* command){
 	char colorString[6];
 	sscanf(command, "next_player %5s", colorString);
@@ -206,6 +268,13 @@ int setFirstPlayer(char* command){
 	return 0;
 }
 
+/*
+ * Main function for handling the "get_moves" command, for printing all possible moves for a given piece on the board during the game stage.
+ *
+ * @return: -1 if the input tile was not formatted legally
+ *			 1 if an allocation failure occurred
+ *			 0 otherwise
+ */
 int printMovesOfPiece(char* command){
 	char tile[6];
 	sscanf(command, "get_moves %5s", tile);
@@ -224,6 +293,16 @@ int printMovesOfPiece(char* command){
 	return 0;
 }
 
+/*
+ * Main function for handling the "move" command, for executing a move during the game stage.
+ *
+ * @return: -6 if the input move is illegal at this point in the game
+ *			-5 if the selected piece does not belong to the current player
+ *  		-2 if illegal coordinates are given as the origin or the destination of the move
+ *			-1 if the input was not formatted legally
+ *			 1 if an allocation failure occurred
+ *			 0 otherwise
+ */
 int movePiece(char* command){
 	char fromTile[6];
 	char toTile[6];
@@ -285,6 +364,12 @@ int movePiece(char* command){
 	return 0;
 }
 
+/*
+ * Main function for handling the "load" command, for loading a saved game during the settings stage.
+ *
+ * @return: -9 if an error occured during the opening of the file
+ *			 0 otherwise
+ */
 int loadGame (char* command){
 	int updatedGameMode = 0;
 	char path[1024];
@@ -348,6 +433,7 @@ int loadGame (char* command){
 				else{
 					Board_setPiece(&board, x, y, Board_EMPTY);
 				}
+				Board_updateKingPosition(&board, x, y);
 			}
 		}
 	}
@@ -356,6 +442,12 @@ int loadGame (char* command){
 	return 0;
 }
 
+/*
+ * Main function for handling the "save" command, for saving a game during the game stage.
+ *
+ * @return: -9 if an error occured during the saving of the file or if the specified name does not end with ".xml"
+ *			 0 otherwise
+ */
 int saveGame (char* command){
 	char fileName[1024];
 	char buff[4];
@@ -381,14 +473,13 @@ int saveGame (char* command){
 	
 	fprintf(gameFile, "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<game>\n\t<next_turn>%s" 
 				      "</next_turn>\n\t<game_mode>%c</game_mode>\n\t<difficulty>%s</difficulty>\n\t<user_color>"
-					  "%s</user_color>\n\t<board>\n\t\t", nextTurn, gameModeAsChar, difficultyString, userColor);
-	
+					  "%s</user_color>\n\t<board>\n\t\t", nextTurn, gameModeAsChar, difficultyString, userColor);	
 	for(int y = 8; y >= 1; y--){
 		fprintf(gameFile, "<row_%d>", y);
 		for (int x = 1; x <= 8; x++){
 			char newPiece = Board_getPiece(&board, x, y);
 			if (newPiece == Board_EMPTY){
-				fprintf(gameFile,"_");
+				fprintf(gameFile, "_");
 			}
 			else{ 
 				fprintf(gameFile, "%c", newPiece);
@@ -460,7 +551,7 @@ int executeCommand(char* command){
 			}	
 			turn = first;
 			state = GAME;
-			return 0;
+			return 2; //special value to break the humanTurn loop so the initial board will be checked for immediate loss or tie conditions
 		}
 	}
 	else{
@@ -570,6 +661,9 @@ void humanTurn(int player){
 		char command[64];
 		fgets(command, 63, stdin);
 		int error = executeCommand(command);
+		if (error == 2){
+			break;
+		}
 		printError(error);
 	}
 }
