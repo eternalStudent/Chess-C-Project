@@ -6,7 +6,7 @@
  * board after this particular move has been carried out. 
  *
  * @params: start - a pointer to the starting tile
-            end   - a pointer to the end tile 
+ *          end   - a pointer to the end tile 
  *          board - the board before the move
  * @return: NULL if any allocation errors occurred, the structure otherwise
  */
@@ -41,17 +41,22 @@ int PossibleMove_equals(struct PossibleMove* this, struct PossibleMove* other){
  * Prints the structure in the format: "move <x,y> to <i,j>[<k,l>...]".
  */
 void PossibleMove_print(struct PossibleMove* move){
-	printf("move <%c,%d> to <%c,%d>", move->fromX+96, move->fromY, move->toX+96, move->toY);
-	switch(move->promotion){
-		case 'b':
-		case 'B': printf(" bishop\n"); break;
-		case 'r': 
-		case 'R': printf(" rook\n"); break;
-		case 'n': 
-		case 'N': printf(" knight\n"); break;
-		case 'q':
-		case 'Q': printf(" queen\n"); break;
-		default: printf("\n");
+	if (move->toX != 0){
+		printf("move <%c,%d> to <%c,%d>", move->fromX+96, move->fromY, move->toX+96, move->toY);
+		switch(move->promotion){
+			case 'b':
+			case 'B': printf(" bishop\n"); break;
+			case 'r': 
+			case 'R': printf(" rook\n"); break;
+			case 'n': 
+			case 'N': printf(" knight\n"); break;
+			case 'q':
+			case 'Q': printf(" queen\n"); break;
+			default: printf("\n");
+		}
+	}
+	else { //casteling move
+	printf("castle <%c,%d>\n", move->fromX+96, move->fromY);
 	}
 }
 

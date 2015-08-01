@@ -25,16 +25,16 @@ void Board_init(Board* board){
 	Board_setPiece(board, 1, 1, Board_WHITE_ROOK);
 	Board_setPiece(board, 2, 1, Board_WHITE_KNIGHT);
 	Board_setPiece(board, 3, 1, Board_WHITE_BISHOP);
-	Board_setPiece(board, 4, 1, Board_WHITE_KING);
-	Board_setPiece(board, 5, 1, Board_WHITE_QUEEN);
+	Board_setPiece(board, 4, 1, Board_WHITE_QUEEN);
+	Board_setPiece(board, 5, 1, Board_WHITE_KING);
 	Board_setPiece(board, 6, 1, Board_WHITE_BISHOP);
 	Board_setPiece(board, 7, 1, Board_WHITE_KNIGHT);
 	Board_setPiece(board, 8, 1, Board_WHITE_ROOK);
 	Board_setPiece(board, 1, 8, Board_BLACK_ROOK);
 	Board_setPiece(board, 2, 8, Board_BLACK_KNIGHT);
 	Board_setPiece(board, 3, 8, Board_BLACK_BISHOP);
-	Board_setPiece(board, 4, 8, Board_BLACK_KING);
-	Board_setPiece(board, 5, 8, Board_BLACK_QUEEN);
+	Board_setPiece(board, 4, 8, Board_BLACK_QUEEN);
+	Board_setPiece(board, 5, 8, Board_BLACK_KING);
 	Board_setPiece(board, 6, 8, Board_BLACK_BISHOP);
 	Board_setPiece(board, 7, 8, Board_BLACK_KNIGHT);
 	Board_setPiece(board, 8, 8, Board_BLACK_ROOK);
@@ -47,6 +47,17 @@ void Board_init(Board* board){
 	board->kingX[WHITE] = 4;
 	board->kingY[BLACK] = 8;
 	board->kingY[WHITE] = 1;
+	memset(board->hasKingEverMoved, 0, sizeof(board->hasKingEverMoved));
+	memset(board->hasRookEverMoved, 0, sizeof(board->hasRookEverMoved[0][0]) * 2 * 2);
+}
+
+/*
+ * @return: 1 if the piece located at (x,y) 
+ * 			on the main playing board is a rook, 0 otherwise 
+ */
+int pieceIsRook(Board* board, int x, int y){
+	char piece = Board_getPiece(board, x, y);
+	return (piece == 'r' || piece == 'R');
 }
 
 /*
@@ -151,7 +162,7 @@ static int Board_getColor(Board* board, int x, int y){
  * Updates the player's king's position in the kingX and kingY arrays, 
  * who keep track of both kings and are part of the board structure. 
  *
- * @params: (borad) - the board struct for which the arrays are to be updated
+ * @params: (board) - the board struct for which the arrays are to be updated
  *			(x, y) the coordinates of the given position
  */
 void Board_updateKingPosition(Board* board, int x, int y){
@@ -169,13 +180,27 @@ void Board_updateKingPosition(Board* board, int x, int y){
  * @params: (move) - the move to be carried out on the board 
  */
 void Board_update(Board* board, struct PossibleMove* move){
-	char piece = Board_getPiece(board, move->fromX, move->fromY);
-	Board_removePiece(board, move->fromX, move->fromY);
-	Board_setPiece(board, move->toX, move->toY, piece);
-	Board_updateKingPosition(board, move->toX, move->toY);
-	if (move->promotion != 0){
-		Board_setPiece(board, move->toX, move->toY, move->promotion);
+	if(move->toX != 0){ // non-castling move
+		char piece = Board_getPiece(board, move->fromX, move->fromY);
+		Board_removePiece(board, move->fromX, move->fromY);
+		Board_setPiece(board, move->toX, move->toY, piece);
+		Board_updateKingPosition(board, move->toX, move->toY);
+		if (move->promotion != 0){
+			Board_setPiece(board, move->toX, move->toY, move->promotion);
+		}
 	}
+	else{
+		char rook = Board_getPiece(board, move->fromX, move->fromY);
+		char king = Board_getPiece(board, 5, move->fromY);
+		int kingMovement = (move->fromX == 1)? -2 : 2;
+		int rookMovement = (move->fromX == 1)? 3 : -2;
+		Board_removePiece(board, move->fromX, move->fromY);
+		Board_setPiece(board, (move->fromX)+rookMovement, move->fromY, rook);
+		Board_removePiece(board, 5, move->fromY);
+		Board_setPiece(board, 5 + kingMovement, move->fromY, king);
+		Board_updateKingPosition(board, 5 + kingMovement, move->fromY);
+	}
+	
 }
 
 /*
@@ -472,6 +497,78 @@ static struct LinkedList* getBishopMoves(Board* board, int fromX, int fromY){
 }
 
 /*
+ * Checks if a clear and safe horizontal path exists on (board) between (fromX, y) and (toX, y).
+ * That is, a path that is not occupied by any piece, and if the king would move from (fromX, y) to (toX, y),
+ * at no point will it be under attack.
+ * @params: (board) - the board to be checked
+ *		    (fromX), (toX), (y) - the relevant coordinates on the board
+ *
+ * @return: 1 if such a path exists, 0 otherwise
+ */
+int Board_clearAndSafeHorizontalPathExistsForKing(Board* board, int fromX, int toX, int y){
+	int exitcode = 1;
+	int player = Board_getColor(board, fromX, y);
+	int adjustment = (toX < fromX)? -1 : 1;
+	
+	for (int i = 1; i <= 2; i++){
+		if(!Board_isEmpty(board, fromX+i*adjustment, y)){
+			exitcode = 0;
+			break;
+		}
+		struct PossibleMove* step = PossibleMove_new(fromX+(i-1)*adjustment, y, fromX+adjustment*i, y, 0, board);
+		if(!step){
+			// allocation error not handled
+		}
+		if(Board_isInCheck(step->board, player)){
+			exitcode = 0;
+			PossibleMove_free(step);
+			break;
+		}
+	}
+	return exitcode;
+}
+
+int Board_clearHorizontalPathExists(Board* board, int fromX, int toX, int y){
+	int adjustment = (toX < fromX)? -1 : 1;
+	for (int x = fromX+adjustment; x != toX; x += adjustment){
+		if (!Board_isEmpty(board, x, y)){
+			return 0;
+		}
+	}
+	return 1;
+	
+}
+
+static struct LinkedList* getCastlingMoves(Board* board, int x, int y){
+	int player = Board_getColor(board, x, y);
+	int legalY = (player == WHITE)? 1 : 8;
+	
+	struct LinkedList* possibleMoves = PossibleMoveList_new();
+	if (!possibleMoves){
+		return NULL;
+	}
+	if ((!pieceIsRook(board, x, y))
+		||(y != legalY) 
+		|| (board->hasKingEverMoved[player])
+		|| (Board_isInCheck(board, player))
+		|| (board->hasRookEverMoved[player][0] && board->hasRookEverMoved[player][1])){			
+		return possibleMoves; //empty list
+	}
+	int kingDestX = (x == 1)? 3 : 7;
+	int positionInRookMovementArray = (x == 1)? 0 : 1;
+	if (Board_clearHorizontalPathExists(board, 5, x, y) 
+		&& Board_clearAndSafeHorizontalPathExistsForKing(board, 5, kingDestX, y) 
+		&& board->hasRookEverMoved[player][positionInRookMovementArray] == 0){
+		struct PossibleMove* newCastlingMove = PossibleMove_new(x, y, 0, 0, 0, board);
+		if(!newCastlingMove){
+			return NULL;
+		}
+		LinkedList_add(possibleMoves, newCastlingMove);
+	}
+	return possibleMoves;
+}
+
+/*
  * Gets all possible moves for a given rook piece on a given board.
  *
  * @return: A list of all possible moves for a rook located at (fromX, fromY) on (board)       
@@ -497,6 +594,13 @@ static struct LinkedList* getRookMoves(Board* board, int fromX, int fromY){
 			}
 		}
 	}
+	struct LinkedList* castlingMoves = getCastlingMoves(board, fromX, fromY);
+	if (!castlingMoves){
+		PossibleMoveList_free(possibleMoves);
+		return NULL;
+	}
+	LinkedList_concatenate(possibleMoves, castlingMoves);
+	
 	return possibleMoves;
 }
 
@@ -560,6 +664,21 @@ static struct LinkedList* getKingMoves(Board* board, int fromX, int fromY){
 			addMoveIfLegal(possibleMoves, board, fromX, fromY, sideward, forward);
 		}
 	}
+	
+	struct LinkedList* castlingMoves1 = getCastlingMoves(board, 1, fromY);
+	if (!castlingMoves1){
+		PossibleMoveList_free(possibleMoves);
+		return NULL;
+	}
+	LinkedList_concatenate(possibleMoves, castlingMoves1);
+	
+	struct LinkedList* castlingMoves2 = getCastlingMoves(board, 8, fromY);
+	if (!castlingMoves2){
+		PossibleMoveList_free(possibleMoves);
+		return NULL;
+	}
+	LinkedList_concatenate(possibleMoves, castlingMoves2);
+	
 	return possibleMoves;
 }
 
@@ -582,7 +701,7 @@ struct LinkedList* Board_getPossibleMovesOfPiece(Board* board, int x, int y){
 		case Board_BLACK_KNIGHT:
 		case Board_WHITE_KNIGHT: return getKnightMoves(board, x, y);
 		case Board_BLACK_KING:
-		case Board_WHITE_KING:   return getKingMoves  (board, x, y);
+		case Board_WHITE_KING: 	 return getKingMoves  (board, x, y);
 	}
 	return PossibleMoveList_new();
 }
@@ -608,7 +727,7 @@ struct LinkedList* Board_getPossibleMoves(Board* board, int player){
 				PossibleMoveList_free(possibleMoves);
 				return NULL;
 			}
-			LinkedList_concatenate(possibleMoves, pieceMoves);	
+			LinkedList_concatenate(possibleMoves, pieceMoves);
 		}
 	}
 	return possibleMoves;

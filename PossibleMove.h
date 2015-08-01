@@ -2,6 +2,8 @@ typedef struct Board{
 	char matrix[8][8];
 	int kingX[2];
 	int kingY[2];
+	int hasKingEverMoved[2];
+	int hasRookEverMoved[2][2];
 } Board;
 
 struct PossibleMove{

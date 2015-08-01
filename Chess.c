@@ -59,9 +59,18 @@ int readTile(char* str, int* x, int* y){
  * @return: 1 if the piece located at (x,y) 
  * 			on the main playing board is a pawn, 0 otherwise 
  */
-int pieceIsPawn (int x, int y){
+int pieceIsPawn(int x, int y){
 	char piece = Board_getPiece(&board, x, y);
 	return toBlack(piece) == Board_BLACK_PAWN; 
+}
+
+/*
+ * @return: 1 if the piece located at (x,y) 
+ * 			on the main playing board is a king, 0 otherwise 
+ */
+int pieceIsKing(int x, int y){
+	char piece = Board_getPiece(&board, x, y);
+	return toBlack(piece) == Board_BLACK_KING; 
 }
 
 /*
@@ -271,7 +280,8 @@ int setFirstPlayer(char* command){
 /*
  * Main function for handling the "get_moves" command, for printing all possible moves for a given piece on the board during the game stage.
  *
- * @return: -1 if the input tile was not formatted legally
+ * @return: -5 if the input tile does not is not occupied by one of the current player's pieces
+ *			-1 if the input tile was not formatted legally
  *			 1 if an allocation failure occurred
  *			 0 otherwise
  */
@@ -281,6 +291,10 @@ int printMovesOfPiece(char* command){
 	int x, y;
 	if (readTile(tile, &x, &y) == -1){
 		return -1;
+	}
+	
+	if (Board_getColor(&board, x, y) != turn){
+		return -5;
 	}
 	
 	struct LinkedList* possibleMoves = Board_getPossibleMovesOfPiece(&board, x, y);
@@ -297,7 +311,7 @@ int printMovesOfPiece(char* command){
  * Main function for handling the "move" command, for executing a move during the game stage.
  *
  * @return: -6 if the input move is illegal at this point in the game
- *			-5 if the selected piece does not belong to the current player
+ *			-5 if the input tile does not is not occupied by one of the current player's pieces
  *  		-2 if illegal coordinates are given as the origin or the destination of the move
  *			-1 if the input was not formatted legally
  *			 1 if an allocation failure occurred
@@ -351,6 +365,15 @@ int movePiece(char* command){
 		return -6;
 	}
 	
+	if((pieceIsKing(fromX,fromY)) && ((&board)->hasKingEverMoved[turn] == 0)){ //keeping track of king movements for castling
+		(&board)->hasKingEverMoved[turn] = 1;
+	}
+	
+	if((pieceIsRook(&board, fromX, fromY)) && ((fromX == 1) || (fromX == 8))) { //keeping track of rook movements for castling
+		int locationInRookArray = (fromX == 1)? 0 : 1;
+		(&board)->hasRookEverMoved[turn][locationInRookArray] = 1;
+	}
+	
 	if (promoteTo != 0){
 		char formerPawn = (turn == WHITE)? 'm':'M';
 		PieceCounter_update(counter, formerPawn, -1, toX, toY); // toX and toY are irrelevant in this line 
@@ -364,6 +387,48 @@ int movePiece(char* command){
 	return 0;
 }
 
+int castlePiece(char* command){
+	char rookTile[6];
+	sscanf(command, "castle %5s", rookTile);
+	int rookX, rookY;
+	if (readTile(rookTile, &rookX, &rookY) == -1){
+		return -1;
+	}
+	if (!Board_isInRange(rookX, rookY)){
+		return -2;
+	}
+	if (Board_getColor(&board, rookX, rookY) != turn){
+		return -5;
+	}
+	if(!pieceIsRook(&board, rookX, rookY)){
+		return -11;
+	}
+	struct PossibleMove* castlingMove = PossibleMove_new(rookX, rookY, 0, 0, 0, &board);
+	if (!castlingMove){
+		return 1;
+	}
+	
+	struct LinkedList* possibleMoves = Board_getPossibleMovesOfPiece(&board, rookX, rookY);
+	if (!possibleMoves){
+		PossibleMove_free(castlingMove);
+		return 1;
+	}
+	
+	if (!PossibleMoveList_contains(possibleMoves, castlingMove)){
+		PossibleMove_free(castlingMove);
+		return -12;
+	}
+	
+	(&board)->hasKingEverMoved[turn] = 1;
+	int positionInRookArray = (rookX == 1)? 0 : 1;
+	(&board)->hasRookEverMoved[turn][positionInRookArray] = 1;
+	Board_update(&board, castlingMove);
+	Board_print(&board);
+	PossibleMove_free(castlingMove);
+	PossibleMoveList_free(possibleMoves);
+	turn = !turn;
+	return 0;
+}
 /*
  * Main function for handling the "load" command, for loading a saved game during the settings stage.
  *
@@ -373,7 +438,7 @@ int movePiece(char* command){
 int loadGame (char* command){
 	int updatedGameMode = 0;
 	char path[1024];
-	char buff[41];
+	char buff[51];
 	sscanf(command, "%4s %1023s", buff, path);
 	
 	FILE* gameFile = fopen(path, "r");
@@ -381,7 +446,7 @@ int loadGame (char* command){
 		return -9;
 	}
 	
-	while(fgets(buff, 40, gameFile) != 0){
+	while(fgets(buff, 50, gameFile) != 0){
 		if (strstr (buff, "<next_turn>")){
 			if (strstr(buff,"White")){
 				first = WHITE;
@@ -434,6 +499,19 @@ int loadGame (char* command){
 					Board_setPiece(&board, x, y, Board_EMPTY);
 				}
 				Board_updateKingPosition(&board, x, y);
+			}
+		}
+		else if (strstr(buff, "kingMovementArray")){
+			for (int i = 21; i <= 22; i++){
+				(&board)->hasKingEverMoved[i-21] = buff[i]-48;
+			}
+		}
+		else if (strstr(buff, "rookMovementArray")){
+			for (int i = 21; i <= 22; i++){
+				(&board)->hasRookEverMoved[0][i-21] = buff[i]-48;
+			}
+			for (int i = 23; i <= 24; i++){
+				(&board)->hasRookEverMoved[1][i-23] = buff[i]-48;
 			}
 		}
 	}
@@ -551,7 +629,7 @@ int executeCommand(char* command){
 			}	
 			turn = first;
 			state = GAME;
-			return 2; //special value to break the humanTurn loop so the initial board will be checked for immediate loss or tie conditions
+			return 2; //special value to break the humanTurn loop so the initial board will always be checked for immediate loss or tie conditions
 		}
 	}
 	else{
@@ -560,6 +638,9 @@ int executeCommand(char* command){
 		}
 		if (str_equals(str, "move")){
 			return movePiece(command);
+		}
+		if (str_equals(str, "castle")){
+			return castlePiece(command);
 		}
 		if (str_equals(str,"save")){
 			return saveGame(command);
@@ -587,6 +668,8 @@ void printError(int error){
 		case -8: printf("Setting this piece creates an invalid board\n"); break;
 		case -9: printf("Wrong file name\n"); break;
 		case -10:printf("Error: standard function fprintf has failed\n"); break;
+		case -11:printf("Wrong position for a rook\n"); break;
+		case -12:printf("Illegal castling move\n"); break;
 	}
 }
 
@@ -661,7 +744,7 @@ void humanTurn(int player){
 		char command[64];
 		fgets(command, 63, stdin);
 		int error = executeCommand(command);
-		if (error == 2){
+		if (error == 2){ //breaks the loop when the "start" command is entered, so that the initial board will be checked for losing/tie conditions
 			break;
 		}
 		printError(error);
