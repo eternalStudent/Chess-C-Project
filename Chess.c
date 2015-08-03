@@ -567,10 +567,21 @@ int saveGame (char* command){
 			fprintf(gameFile, "</row_%d>\n\t\t", y);
 		}
 		else{
-			fprintf(gameFile, "</row_%d>\n\t</board>\n</game>", y);
+			fprintf(gameFile, "</row_%d>\n\t</board>\n\t<general>\n\t\t<kingMovementArray>", y);
 		}
 	}
 
+	for (int i = 0; i <= 1; i++){
+		fprintf(gameFile, "%d", (&board)->hasKingEverMoved[i]);
+	}
+	fprintf(gameFile, "</kingMovementArray>\n\t\t<rookMovementArray>");
+	for (int i = 0; i <= 1; i++){
+		for (int j = 0; j <= 1; j++){
+			fprintf(gameFile, "%d", (&board)->hasRookEverMoved[i][j]);
+		}
+	}
+	fprintf(gameFile, "</rookMovementArray>\n\t</general>\n</game>");
+	
 	if (ferror(gameFile)){
 		fclose(gameFile);
 		return -10;
