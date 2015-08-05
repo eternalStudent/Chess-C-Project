@@ -1,4 +1,6 @@
 #include "PieceCounter.h"
+#include "Board.h"
+#include <ctype.h>
 
 int max[7] = {8, 2, 2, 1, 1, 1, 1};
 

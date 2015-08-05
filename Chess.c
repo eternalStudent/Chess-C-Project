@@ -1,4 +1,9 @@
-#include "PossibleMove.c"
+#include "PossibleMove.h"
+#include "Board.h"
+#include "PossibleMoveList.h"
+#include "PieceCounter.h"
+#include "Iterator.h"
+#include "LinkedList.h"
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
@@ -19,6 +24,7 @@ int player1;
 int turn;
 int first;
 int counter[2][7];
+struct LinkedList* globalPossibleMoves;
 
 
 /*
@@ -322,6 +328,7 @@ int movePiece(char* command){
 	char toTile[6];
 	char promoteToAsString[7];
 	char promoteTo;
+	memset(promoteToAsString, 0, 7); //initializing promoteToAsString to avoid problems with promotion-less move commands
 	
 	sscanf(command, "move %5s to %5s %6s", fromTile, toTile, promoteToAsString);
 	int fromX, fromY, toX, toY;
@@ -416,6 +423,7 @@ int castlePiece(char* command){
 	
 	if (!PossibleMoveList_contains(possibleMoves, castlingMove)){
 		PossibleMove_free(castlingMove);
+		PossibleMoveList_free(possibleMoves);
 		return -12;
 	}
 	
@@ -601,6 +609,7 @@ int executeCommand(char* command){
 	char str[64];
 	sscanf(command, "%s", str);
 	if (str_equals(str, "quit")){
+		PossibleMoveList_free(globalPossibleMoves);
 		exit(0);
 	}	
 	if (state == SETTINGS){
@@ -767,14 +776,15 @@ int main(){
 	Board_print(&board);
 	printf("Enter game settings:\n");
 	while (1){
-		struct LinkedList* possibleMoves = Board_getPossibleMoves(&board, turn);
-		if (!possibleMoves){
+		globalPossibleMoves = Board_getPossibleMoves(&board, turn);
+		if (!globalPossibleMoves){
 			allocationFailed();
 		}
 		if (Board_isInCheck(&board, turn)){
 			printf("Check\n");
 		}
-		if (LinkedList_length(possibleMoves) == 0){
+		if (LinkedList_length(globalPossibleMoves) == 0){
+			PossibleMoveList_free(globalPossibleMoves);
 			break;
 		}
 		humanTurn(turn);

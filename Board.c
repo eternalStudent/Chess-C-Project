@@ -1,6 +1,13 @@
 #include <stdio.h>
 #include <ctype.h>
+#include <string.h>
+#include <stdlib.h>
+
 #include "Board.h"
+#include "PossibleMove.h"
+#include "LinkedList.h"
+#include "PossibleMoveList.h"
+
 
 /*
  * Creates a new board structure.
@@ -150,7 +157,7 @@ int Board_isEmpty(Board* board, int x, int y){
  * @params: (x, y) the coordinates of the given position
  * @return: -1 if the position is empty, the color of the piece otherwise
  */
-static int Board_getColor(Board* board, int x, int y){
+int Board_getColor(Board* board, int x, int y){
 	if (Board_isEmpty(board, x, y)){
 		return -1;
 	}
@@ -346,7 +353,7 @@ static int canBeCapturedByABishopRookOrQueen(Board* board, int player){
 						&& toupper(Board_getPiece(board, x, y)) == Board_BLACK_ROOK){
 					return 1;
 				}
-				if (toupper(Board_getPiece(board, x, y)) == Board_BLACK_BISHOP){
+				if ((sideward != 0 && forward != 0) && toupper(Board_getPiece(board, x, y)) == Board_BLACK_BISHOP){
 					return 1;
 				}
 			}
@@ -524,6 +531,7 @@ int Board_clearAndSafeHorizontalPathExistsForKing(Board* board, int fromX, int t
 			PossibleMove_free(step);
 			break;
 		}
+		PossibleMove_free(step);
 	}
 	return exitcode;
 }
@@ -551,7 +559,7 @@ static struct LinkedList* getCastlingMoves(Board* board, int x, int y){
 		||(y != legalY) 
 		|| (board->hasKingEverMoved[player])
 		|| (Board_isInCheck(board, player))
-		|| (board->hasRookEverMoved[player][0] && board->hasRookEverMoved[player][1])){			
+		|| (board->hasRookEverMoved[player][0] && board->hasRookEverMoved[player][1])){	
 		return possibleMoves; //empty list
 	}
 	int kingDestX = (x == 1)? 3 : 7;

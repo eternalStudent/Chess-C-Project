@@ -1,4 +1,7 @@
-#include "PieceCounter.c"
+#include <stdlib.h>
+#include <stdio.h>
+#include "PossibleMove.h"
+#include "Board.h"
 
 /* 
  * Creates a new PossibleMove structure, consisting of the starting tile,
@@ -55,8 +58,8 @@ void PossibleMove_print(struct PossibleMove* move){
 			default: printf("\n");
 		}
 	}
-	else { //casteling move
-	printf("castle <%c,%d>\n", move->fromX+96, move->fromY);
+	else { //castling move
+		printf("castle <%c,%d>\n", move->fromX+96, move->fromY);
 	}
 }
 

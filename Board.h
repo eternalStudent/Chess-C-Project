@@ -1,4 +1,7 @@
-#include "PossibleMoveList.c"
+#include "PossibleMove.h"
+
+#ifndef BOARD_H
+#define BOARD_H
 
 #define Board_WHITE_PAWN   'm'
 #define Board_WHITE_BISHOP 'b'
@@ -18,12 +21,13 @@
 #define BLACK 0
 #define WHITE 1
 
-
 Board* Board_new();
 
 int Board_isFurthestRowForPlayer (int player, int y);
 
 void Board_init      (Board* board);
+
+int pieceIsRook(Board* board, int x, int y);
 
 void Board_clear     (Board* board);
 
@@ -33,9 +37,13 @@ void Board_setPiece  (Board* board, int x, int y, char piece);
 
 char Board_getPiece  (Board* board, int x, int y);
 
-char Board_remove    (Board* board, int x, int y);
+char Board_removePiece (Board* board, int x, int y);
 
 int  Board_isEmpty   (Board* board, int x, int y);
+
+int Board_getColor(Board* board, int x, int y);
+
+void Board_updateKingPosition (Board* board, int x, int y);
 
 int  Board_isInRange (int x, int y);
 
@@ -47,8 +55,14 @@ int  Board_evalPiece (Board* board, int x, int y, int color);
 
 int  Board_getScore  (Board* board, int color);
 
+int Board_isInCheck(Board* board, int player);
+
+struct LinkedList* Board_getPossibleMovesOfPiece(Board* board, int x, int y);
+
 struct LinkedList* Board_getPossibleMoves(Board* board, int player);
 
 void Board_print     (Board* board);
 
 void Board_free      (Board* board);
+
+#endif

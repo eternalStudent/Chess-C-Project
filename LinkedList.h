@@ -1,3 +1,6 @@
+#ifndef LINKEDLIST_H
+#define LINKEDLIST_H
+
 struct ListNode{
 	void* data;
 	struct ListNode* next;
@@ -23,3 +26,5 @@ void* LinkedList_first(struct LinkedList* list);
 void LinkedList_free(struct LinkedList* list);
 
 void LinkedList_freeAllButOne(struct LinkedList* list, void* data);
+
+#endif

@@ -1,4 +1,7 @@
 #include "PossibleMoveList.h"
+#include "PossibleMove.h"
+#include "Iterator.h"
+#include "LinkedList.h"
 
 /*
  * Creates new LinkedList instant of PossibleMoves.
