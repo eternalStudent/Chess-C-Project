@@ -326,9 +326,8 @@ int movePiece(char* command){
 	char fromTile[6];
 	char toTile[6];
 	char promoteToAsString[10];
-	char promoteTo;
+	char promoteTo = 0; //initializing promoteTo to avoid problems with promotion-less move commands
 	strncpy(promoteToAsString, "undefined", 10);
-	//memset(promoteToAsString, 0, 7); //initializing promoteToAsString to avoid problems with promotion-less move commands
 	
 	sscanf(command, "move %5s to %5s %6s", fromTile, toTile, promoteToAsString);
 	int fromX, fromY, toX, toY;

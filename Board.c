@@ -474,6 +474,10 @@ int addMoveIfLegal(struct LinkedList* possibleMoves, Board* board,
 	if (!Board_isInCheck(move->board, player)){
 		LinkedList_add(possibleMoves, move);
 	}
+	else {
+		PossibleMove_free(move);
+	}
+	
 	if (!Board_isEmpty(board, toX, toY)){
 		return -1;
 	}			
