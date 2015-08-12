@@ -50,8 +50,8 @@ void Board_init(Board* board){
 			Board_setPiece(board, x, y, Board_EMPTY);
 		}
 	}
-	board->kingX[BLACK] = 4;
-	board->kingX[WHITE] = 4;
+	board->kingX[BLACK] = 5;
+	board->kingX[WHITE] = 5;
 	board->kingY[BLACK] = 8;
 	board->kingY[WHITE] = 1;
 	memset(board->hasKingEverMoved, 0, sizeof(board->hasKingEverMoved));

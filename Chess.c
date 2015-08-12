@@ -24,7 +24,6 @@ int player1;
 int turn;
 int first;
 int counter[2][7];
-struct LinkedList* globalPossibleMoves;
 
 
 /*
@@ -326,9 +325,10 @@ int printMovesOfPiece(char* command){
 int movePiece(char* command){
 	char fromTile[6];
 	char toTile[6];
-	char promoteToAsString[7];
+	char promoteToAsString[10];
 	char promoteTo;
-	memset(promoteToAsString, 0, 7); //initializing promoteToAsString to avoid problems with promotion-less move commands
+	strncpy(promoteToAsString, "undefined", 10);
+	//memset(promoteToAsString, 0, 7); //initializing promoteToAsString to avoid problems with promotion-less move commands
 	
 	sscanf(command, "move %5s to %5s %6s", fromTile, toTile, promoteToAsString);
 	int fromX, fromY, toX, toY;
@@ -336,12 +336,12 @@ int movePiece(char* command){
 			|| readTile(toTile, &toX, &toY) == -1){
 		return -1;
 	}
-
-	promoteTo = stringToPiece(promoteToAsString, turn);
-	if((!promoteTo && (int)promoteToAsString[0] > 32) || 
-		(promoteTo && (!Board_isFurthestRowForPlayer(turn, toY) || 
-		!pieceIsPawn(fromX, fromY)))){ 
-		return -1;
+	
+	if (!str_equals(promoteToAsString, "undefined")){
+		promoteTo = stringToPiece(promoteToAsString, turn);
+		if (!promoteTo || !Board_isFurthestRowForPlayer(turn, toY) || !pieceIsPawn(fromX, fromY)){
+			return -1;
+		}
 	}
 	
 	if (!Board_isInRange(fromX, fromY) 
@@ -609,7 +609,6 @@ int executeCommand(char* command){
 	char str[64];
 	sscanf(command, "%s", str);
 	if (str_equals(str, "quit")){
-		PossibleMoveList_free(globalPossibleMoves);
 		exit(0);
 	}	
 	if (state == SETTINGS){
@@ -776,17 +775,18 @@ int main(){
 	Board_print(&board);
 	printf("Enter game settings:\n");
 	while (1){
-		globalPossibleMoves = Board_getPossibleMoves(&board, turn);
-		if (!globalPossibleMoves){
+		struct LinkedList* allPossibleMoves = Board_getPossibleMoves(&board, turn);
+		if (!allPossibleMoves){
 			allocationFailed();
 		}
 		if (Board_isInCheck(&board, turn)){
 			printf("Check\n");
 		}
-		if (LinkedList_length(globalPossibleMoves) == 0){
-			PossibleMoveList_free(globalPossibleMoves);
+		if (LinkedList_length(allPossibleMoves) == 0){
+			PossibleMoveList_free(allPossibleMoves);
 			break;
 		}
+		PossibleMoveList_free(allPossibleMoves);
 		humanTurn(turn);
 	}
 	if (Board_isInCheck(&board, turn)){
