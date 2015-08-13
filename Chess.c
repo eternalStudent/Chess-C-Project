@@ -13,6 +13,8 @@
 #define SETTINGS 0
 #define GAME     1
 #define BEST     0
+#define SINGLE_PLAYER_MODE 1
+#define TWO_PLAYERS_MODE 2
 
 #define str_equals(x, y) strcmp(x, y) == 0
 #define toBlack(x) toupper(x)
@@ -202,11 +204,11 @@ int setGameMode(char* command){
 	
 	switch(mode){
 		case 1: 
-		gameMode = 1;
+		gameMode = TWO_PLAYERS_MODE;
 		printf("Running game in 2 players mode\n");
 		break;
 		case 2:
-		gameMode = 2;
+		gameMode = SINGLE_PLAYER_MODE;
 		printf("Running game in player vs. AI mode\n");
 		break;
 		default: return -3;
@@ -787,30 +789,48 @@ void humanTurn(int player){
 	}
 }
 
-int main(){
-	initialize();
-	Board_print(&board);
-	printf("Enter game settings:\n");
-	while (1){
-		struct LinkedList* allPossibleMoves = Board_getPossibleMoves(&board, turn);
-		if (!allPossibleMoves){
-			allocationFailed();
-		}
-		if (Board_isInCheck(&board, turn)){
-			printf("Check\n");
-		}
-		if (LinkedList_length(allPossibleMoves) == 0){
-			PossibleMoveList_free(allPossibleMoves);
-			break;
-		}
-		PossibleMoveList_free(allPossibleMoves);
-		humanTurn(turn);
+int isEndGame(){
+	int endGame = 0;
+	struct LinkedList* allPossibleMoves = Board_getPossibleMoves(&board, turn);
+	if (!allPossibleMoves){
+		allocationFailed();
 	}
+	if (Board_isInCheck(&board, turn)){
+		printf("Check\n");
+	}
+	if (LinkedList_length(allPossibleMoves) == 0){
+		endGame = 1;
+	}
+	PossibleMoveList_free(allPossibleMoves);
+	return endGame;
+}
+
+void printEndGameResults(){
 	if (Board_isInCheck(&board, turn)){
 		printf("Mate! %s player wins the game\n", (turn == BLACK)? "White" : "Black");
 	}
 	else{
 		printf("The game ends in a tie\n");
 	}
+}
+
+int main(){
+	initialize();
+	Board_print(&board);
+	printf("Enter game settings:\n");
+	
+	while (1){
+		if (isEndGame()){
+			break;
+		}
+		if (turn != player1 && gameMode == TWO_PLAYERS_MODE){
+			computerTurn();
+		}
+		else{
+			humanTurn(turn);
+		}	
+	}
+	
+	printEndGameResults();
 	return 0;
 }
