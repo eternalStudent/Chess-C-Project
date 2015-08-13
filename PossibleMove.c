@@ -41,7 +41,7 @@ int PossibleMove_equals(struct PossibleMove* this, struct PossibleMove* other){
 }
 
 /* 
- * Prints the structure in the format: "move <x,y> to <i,j>[<k,l>...]".
+ * Prints the structure in the format: "move <fromX,fromY> to <toX,toY> promotion".
  */
 void PossibleMove_print(struct PossibleMove* move){
 	if (move->toX != 0){

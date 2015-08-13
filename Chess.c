@@ -8,11 +8,12 @@
 #include <stdio.h>
 #include <string.h>
 #include <ctype.h>
+#include <limits.h>
 
 #define SETTINGS 0
 #define GAME     1
-#define UNDEFINED 101
 #define BEST     0
+
 #define str_equals(x, y) strcmp(x, y) == 0
 #define toBlack(x) toupper(x)
 
@@ -694,12 +695,15 @@ void printError(int error){
 /*
  * The minimax AI algorithm.
  */
-struct PossibleMove* minimax(struct PossibleMove* possibleMove, int depth, int player){
+struct PossibleMove* minimax(struct PossibleMove* possibleMove, int depth, int player, int alpha, int beta){
 	if (depth == 0){
 		return possibleMove;
 	}
 	Board* board = possibleMove->board;
 	struct LinkedList* possibleMoves = Board_getPossibleMoves(board, player);
+	if (!possibleMoves){
+		return NULL;
+	}
 	if (LinkedList_length(possibleMoves) == 0){
 		LinkedList_free(possibleMoves);
 		return possibleMove;
@@ -711,23 +715,37 @@ struct PossibleMove* minimax(struct PossibleMove* possibleMove, int depth, int p
 	}
 	
 	struct PossibleMove* bestPossibleMove;
-	int extremum = UNDEFINED;
+	int extremum = (player == player1)? INT_MIN: INT_MAX;;
 	struct Iterator iterator;
 	Iterator_init(&iterator, possibleMoves);
 	while (Iterator_hasNext(&iterator)) {
 		struct PossibleMove* currentPossibleMove = (struct PossibleMove*)Iterator_next(&iterator);
-		struct PossibleMove* temp = minimax(currentPossibleMove, depth-1, player);
+		struct PossibleMove* temp = minimax(currentPossibleMove, depth-1, player, alpha, beta);
+		if (!temp){
+			return NULL;
+		}
 		int score = Board_getScore(temp->board, player);
 		if (currentPossibleMove != temp){
 			PossibleMove_free(temp);
 		}		
-		if (extremum == UNDEFINED || 
-				(player != player1 && score >  extremum) || 
+		if (	(player != player1 && score >  extremum) || 
 				(player == player1 && score <  extremum) || 
-				(rand()%2       && score == extremum)
+				(rand()%2          && score == extremum)
 			){
 			extremum = score;
 			bestPossibleMove = currentPossibleMove;
+		}
+		if (player == player1){
+			alpha = (score > alpha)? score: alpha;
+			if (alpha >= beta){
+				break;
+			}	
+		}
+		else{
+			beta = (score < beta)? score: beta;
+			if (beta <= alpha){
+				break;
+			}
 		}
 	}
 	LinkedList_freeAllButOne(possibleMoves, bestPossibleMove);
@@ -740,7 +758,7 @@ struct PossibleMove* minimax(struct PossibleMove* possibleMove, int depth, int p
 void computerTurn(){
 	struct PossibleMove possibleMove;
 	possibleMove.board = &board;
-	struct PossibleMove* bestMove = minimax(&possibleMove, maxRecursionDepth, !player1);
+	struct PossibleMove* bestMove = minimax(&possibleMove, maxRecursionDepth, !player1, INT_MIN, INT_MAX);
 	printf("Computer: ");
 	PossibleMove_print(bestMove);
 	printf("\n");

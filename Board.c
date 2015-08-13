@@ -2,6 +2,7 @@
 #include <ctype.h>
 #include <string.h>
 #include <stdlib.h>
+#include <limits.h>
 
 #include "Board.h"
 #include "PossibleMove.h"
@@ -261,6 +262,12 @@ int Board_evalPiece(Board* board, int x, int y, int player){
  * @return: a numeric evaluation of the board
  */
 int Board_getScore(Board* board, int player){
+	if (Board_isInCheck(board, player)){
+		return INT_MIN;
+	}
+	if (Board_isInCheck(board, !player)){
+		return INT_MAX;
+	}
 	int score = 0;
 	for (int x = 1; x <= Board_SIZE; x++){
 		for (int y = 1; y <= Board_SIZE; y++){
