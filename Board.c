@@ -91,10 +91,14 @@ void Board_copy(Board* dest, Board* src){
 			dest->matrix[x][y] = src->matrix[x][y];
 		}
 	}
-	dest->kingX[BLACK] = src->kingX[BLACK];
-	dest->kingX[WHITE] = src->kingX[WHITE];
-	dest->kingY[BLACK] = src->kingY[BLACK];
-	dest->kingY[WHITE] = src->kingY[WHITE];
+	for (int i = 0; i < 2; i++){
+		dest->kingX[i] = src->kingX[i];
+		dest->kingY[i] = src->kingY[i];
+		dest->hasKingEverMoved[i] = src->hasKingEverMoved[i];
+		dest->hasRookEverMoved[i][0] = src->hasRookEverMoved[i][0];
+		dest->hasRookEverMoved[i][1] = src->hasRookEverMoved[i][1];
+	}
+	
 }
 
 /*
@@ -184,12 +188,21 @@ void Board_updateKingPosition(Board* board, int x, int y){
 
 /*
  * Updates a board according to a possible move.
+ * important! move->board may not be up to date!
  *
  * @params: (move) - the move to be carried out on the board 
  */
 void Board_update(Board* board, struct PossibleMove* move){
+	char piece = Board_getPiece(board, move->fromX, move->fromY);
+	int player = Board_getColor(board, move->fromX, move->fromY);	
 	if(move->toX != 0){ // non-castling move
-		char piece = Board_getPiece(board, move->fromX, move->fromY);
+		if(toupper(piece) == Board_BLACK_KING){ //keeping track of king movements for castling
+			board->hasKingEverMoved[player] = 1;
+		}	
+		if(toupper(piece) == Board_BLACK_ROOK){ //keeping track of rook movements for castling
+			int locationInRookArray = (move->fromX == 1)? 0 : 1;
+			board->hasRookEverMoved[player][locationInRookArray] = 1;
+		}
 		Board_removePiece(board, move->fromX, move->fromY);
 		Board_setPiece(board, move->toX, move->toY, piece);
 		Board_updateKingPosition(board, move->toX, move->toY);
@@ -198,15 +211,14 @@ void Board_update(Board* board, struct PossibleMove* move){
 		}
 	}
 	else{
-		char rook = Board_getPiece(board, move->fromX, move->fromY);
-		char king = Board_getPiece(board, 5, move->fromY);
-		int kingMovement = (move->fromX == 1)? -2 : 2;
-		int rookMovement = (move->fromX == 1)? 3 : -2;
-		Board_removePiece(board, move->fromX, move->fromY);
-		Board_setPiece(board, (move->fromX)+rookMovement, move->fromY, rook);
-		Board_removePiece(board, 5, move->fromY);
-		Board_setPiece(board, 5 + kingMovement, move->fromY, king);
-		Board_updateKingPosition(board, 5 + kingMovement, move->fromY);
+		board->hasKingEverMoved[player] = 1;
+		
+		char rook = (player == WHITE)? Board_WHITE_ROOK: Board_BLACK_ROOK;
+		char king = (player == WHITE)? Board_WHITE_KING: Board_BLACK_KING;	
+		Board_setPiece(board, move->fromX, move->fromY, king);
+		Board_setPiece(board, board->kingX[player], board->kingY[player], rook);
+		
+		Board_updateKingPosition(board, move->fromX, move->fromY);
 	}
 	
 }

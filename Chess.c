@@ -315,6 +315,51 @@ int printMovesOfPiece(char* command){
 	return 0;
 }
 
+struct PossibleMove* readMove(char* command, int* exitcode){
+	char fromTile[6];
+	char toTile[6];
+	char promoteToAsString[10];
+	char promoteTo = 0; //initializing promoteTo to avoid problems with promotion-less move commands
+	strncpy(promoteToAsString, "undefined", 10);
+	
+	*exitcode = 0;
+	sscanf(command, "move %5s to %5s %6s", fromTile, toTile, promoteToAsString);
+	int fromX, fromY, toX, toY;
+	if (readTile(fromTile, &fromX, &fromY) == -1 
+			|| readTile(toTile, &toX, &toY) == -1){
+		*exitcode = -1;
+	}
+	
+	if (!str_equals(promoteToAsString, "undefined")){
+		promoteTo = stringToPiece(promoteToAsString, turn);
+		if (!promoteTo || !Board_isFurthestRowForPlayer(turn, toY) || !pieceIsPawn(fromX, fromY)){
+			*exitcode = -1;
+		}
+	}
+	if(pieceIsPawn(fromX, fromY) && Board_isFurthestRowForPlayer(turn, toY) && promoteTo == 0){
+		promoteTo = (turn = WHITE)? 'q':'Q';        //default promotion
+	}
+	
+	if (!Board_isInRange(fromX, fromY) 
+			|| !Board_isInRange(toX, toY)){
+		*exitcode = -2;
+	}
+	if (Board_getColor(&board, fromX, fromY) != turn){
+		*exitcode = -5;
+	}
+	
+	if (exitcode != 0){
+		return NULL;
+	}
+	
+	struct PossibleMove* move = PossibleMove_new(fromX, fromY, toX, toY, promoteTo, &board);
+	if (!move){
+		*exitcode = 1;
+		return NULL;
+	}
+	return move;
+}
+
 /*
  * Main function for handling the "move" command, for executing a move during the game stage.
  *
@@ -326,44 +371,13 @@ int printMovesOfPiece(char* command){
  *			 0 otherwise
  */
 int movePiece(char* command){
-	char fromTile[6];
-	char toTile[6];
-	char promoteToAsString[10];
-	char promoteTo = 0; //initializing promoteTo to avoid problems with promotion-less move commands
-	strncpy(promoteToAsString, "undefined", 10);
-	
-	sscanf(command, "move %5s to %5s %6s", fromTile, toTile, promoteToAsString);
-	int fromX, fromY, toX, toY;
-	if (readTile(fromTile, &fromX, &fromY) == -1 
-			|| readTile(toTile, &toX, &toY) == -1){
-		return -1;
-	}
-	
-	if (!str_equals(promoteToAsString, "undefined")){
-		promoteTo = stringToPiece(promoteToAsString, turn);
-		if (!promoteTo || !Board_isFurthestRowForPlayer(turn, toY) || !pieceIsPawn(fromX, fromY)){
-			return -1;
-		}
-	}
-	
-	if (!Board_isInRange(fromX, fromY) 
-			|| !Board_isInRange(toX, toY)){
-		return -2;
-	}
-	if (Board_getColor(&board, fromX, fromY) != turn){
-		return -5;
-	}
-	
-	if(pieceIsPawn(fromX, fromY) && Board_isFurthestRowForPlayer(turn, toY) && promoteTo == 0){
-		promoteTo = (turn = WHITE)? 'q':'Q';        //default promotion
-	}
-	
-	struct PossibleMove* move = PossibleMove_new(fromX, fromY, toX, toY, promoteTo, &board);
+	int exitcode;
+	struct PossibleMove* move = readMove(command, &exitcode);
 	if (!move){
-		return 1;
+		return exitcode;
 	}
 	
-	struct LinkedList* possibleMoves = Board_getPossibleMovesOfPiece(&board, fromX, fromY);
+	struct LinkedList* possibleMoves = Board_getPossibleMovesOfPiece(&board, move->fromX, move->fromY);
 	if (!possibleMoves){
 		PossibleMove_free(move);
 		return 1;
@@ -374,21 +388,7 @@ int movePiece(char* command){
 		return -6;
 	}
 	
-	if((pieceIsKing(fromX,fromY)) && ((&board)->hasKingEverMoved[turn] == 0)){ //keeping track of king movements for castling
-		(&board)->hasKingEverMoved[turn] = 1;
-	}
-	
-	if((pieceIsRook(&board, fromX, fromY)) && ((fromX == 1) || (fromX == 8))) { //keeping track of rook movements for castling
-		int locationInRookArray = (fromX == 1)? 0 : 1;
-		(&board)->hasRookEverMoved[turn][locationInRookArray] = 1;
-	}
-	
-	if (promoteTo != 0){
-		char formerPawn = (turn == WHITE)? 'm':'M';
-		PieceCounter_update(counter, formerPawn, -1, toX, toY); // toX and toY are irrelevant in this line 
-		PieceCounter_update(counter, promoteTo, -1, toX, toY);
-	}
-	Board_update(&board, move);
+	Board_copy(&board, move->board);
 	Board_print(&board);
 	PossibleMove_free(move);
 	PossibleMoveList_free(possibleMoves);
@@ -439,6 +439,7 @@ int castlePiece(char* command){
 	turn = !turn;
 	return 0;
 }
+
 /*
  * Main function for handling the "load" command, for loading a saved game during the settings stage.
  *
