@@ -212,13 +212,23 @@ void Board_update(Board* board, struct PossibleMove* move){
 	}
 	else{
 		board->hasKingEverMoved[player] = 1;
-		
 		char rook = (player == WHITE)? Board_WHITE_ROOK: Board_BLACK_ROOK;
-		char king = (player == WHITE)? Board_WHITE_KING: Board_BLACK_KING;	
-		Board_setPiece(board, move->fromX, move->fromY, king);
-		Board_setPiece(board, board->kingX[player], board->kingY[player], rook);
+		char king = (player == WHITE)? Board_WHITE_KING: Board_BLACK_KING;
+		int y = board->kingY[player];
 		
-		Board_updateKingPosition(board, move->fromX, move->fromY);
+		Board_removePiece(board, move->fromX, move->fromY);
+		Board_removePiece(board, board->kingX[player], board->kingY[player]);
+		
+		if (move->fromX == 1){
+			Board_setPiece(board, 3, y, king);
+			Board_setPiece(board, 4, y, rook);
+			board->kingX[player] = 3;
+		}
+		else{
+			Board_setPiece(board, 7, y, king);
+			Board_setPiece(board, 6, y, rook);
+			board->kingX[player] = 7;
+		}
 	}
 	
 }
