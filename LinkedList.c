@@ -118,3 +118,15 @@ void LinkedList_freeAllButOne(struct LinkedList* list, void* data){
 	}
 	free(list);
 }
+
+void LinkedList_removeAll(struct LinkedList* list){
+	struct ListNode* node = list->first;
+	while (node != NULL){
+		struct ListNode* next = node->next;
+		free(node);
+		node = next;
+	}
+	list->length = 0;
+	list->first = NULL;
+	list->last = NULL;
+}

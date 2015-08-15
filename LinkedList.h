@@ -27,4 +27,6 @@ void LinkedList_free(struct LinkedList* list);
 
 void LinkedList_freeAllButOne(struct LinkedList* list, void* data);
 
+void LinkedList_removeAll(struct LinkedList* list);
+
 #endif
