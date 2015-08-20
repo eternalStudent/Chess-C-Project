@@ -462,18 +462,32 @@ static struct LinkedList* getPawnMoves(Board* board, int fromX, int fromY){
 		int canMoveForward = Board_isEmpty(board, toX, toY) && sideward == 0;
 		int canCapture = (Board_getColor(board, toX, toY) == !player) && (sideward != 0);
 		if (canMoveForward || canCapture){
-			if (Board_isFurthestRowForPlayer(player, toY)){	//generate all possible promotions	
-				for (int i = 0; i <= 3; i++){
-					if (PossibleMoveList_add(possibleMoves, fromX, fromY, toX, toY, promotionOptions[i], board) != 0){
+			if (Board_isFurthestRowForPlayer(player, toY)){	
+				for (int i = 0; i <= 3; i++){  //generate all possible promotions
+					struct PossibleMove* newMove1 = PossibleMove_new(fromX, fromY, toX, toY, promotionOptions[i], board);
+					if (!newMove1){
 						PossibleMoveList_free(possibleMoves);
 						return NULL;
+					}
+					if (!Board_isInCheck(newMove1->board, player)){
+						LinkedList_add(possibleMoves, newMove1);
+					}
+					else{
+						PossibleMove_free(newMove1);
 					}
 				}
 			}	
 			else{
-				if (PossibleMoveList_add(possibleMoves, fromX, fromY, toX, toY, 0, board) != 0){
+				struct PossibleMove* newMove2 = PossibleMove_new(fromX, fromY, toX, toY, 0, board);
+				if (!newMove2){
 					PossibleMoveList_free(possibleMoves);
 					return NULL;
+				}
+				if (!Board_isInCheck(newMove2->board, player)){
+					LinkedList_add(possibleMoves, newMove2);
+				}
+				else{
+					PossibleMove_free(newMove2);
 				}
 			}
 		}

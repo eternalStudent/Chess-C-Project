@@ -4,10 +4,10 @@ OFILES = Board.o PossibleMove.o PossibleMoveList.o PieceCounter.o Iterator.o Lin
 all: Chess
 
 clean:
-	-rm Chess $(OFILES)
+	-rm chessprog $(OFILES)
 
 Chess: Chess.c $(OFILES)
-	gcc $(CFLAGS) -o $@ $^ 
+	gcc $(CFLAGS) -o chessprog $^ 
 
 Board.o: Board.c Board.h PossibleMove.h PossibleMoveList.h LinkedList.h
 	gcc -c $(CFLAGS) Board.c

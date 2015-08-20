@@ -13,8 +13,8 @@
 #define SETTINGS 0
 #define GAME     1
 #define BEST     0
-#define SINGLE_PLAYER_MODE 1
-#define TWO_PLAYERS_MODE 2
+#define SINGLE_PLAYER_MODE 2
+#define TWO_PLAYERS_MODE 1
 
 #define str_equals(x, y) strcmp(x, y) == 0
 #define toBlack(x) toupper(x)
@@ -72,7 +72,7 @@ int alphabeta(struct PossibleMove* possibleMove, int depth, int player, int alph
 		return Board_getScore(onlyMove->board, player);
 	}
 	
-	struct PossibleMove* bestPossibleMove;
+	struct PossibleMove* bestPossibleMove = NULL;
 	int extremum = (player == player1)? INT_MIN: INT_MAX;;
 	struct Iterator iterator;
 	Iterator_init(&iterator, possibleMoves);
@@ -384,10 +384,14 @@ struct PossibleMove* readMove(char* command, int* exitcode){
 	
 	if (!str_equals(promoteToAsString, "undefined")){
 		promoteTo = stringToPiece(promoteToAsString, turn);
+		if (!promoteTo){
+			*exitcode = -1; // the promotion was not input legally
+		}
 		if (promoteTo && (!Board_isFurthestRowForPlayer(turn, toY) || !pieceIsPawn(fromX, fromY))){
-			*exitcode = -1;
+			*exitcode = -6; // the promotion was input legally, but the move itself is illegal
 		}
 	}
+	
 	if(pieceIsPawn(fromX, fromY) && Board_isFurthestRowForPlayer(turn, toY) && promoteTo == 0){
 		promoteTo = (turn = WHITE)? 'q':'Q';        //default promotion
 	}
@@ -398,10 +402,6 @@ struct PossibleMove* readMove(char* command, int* exitcode){
 	}
 	if (Board_getColor(&board, fromX, fromY) != turn){
 		*exitcode = -5;
-	}
-	
-	if (exitcode != 0){
-		return NULL;
 	}
 	
 	struct PossibleMove* move = PossibleMove_new(fromX, fromY, toX, toY, promoteTo, &board);
@@ -425,7 +425,8 @@ struct PossibleMove* readMove(char* command, int* exitcode){
 int movePiece(char* command){
 	int exitcode;
 	struct PossibleMove* move = readMove(command, &exitcode);
-	if (!move){
+	
+	if (exitcode != 0){
 		return exitcode;
 	}
 	
@@ -525,10 +526,34 @@ int printBestMoves(char* command){
 
 int printMoveValue(char* command){
 	int exitcode;
-	struct PossibleMove* move = readMove(command+10, &exitcode);
-	//well... it's a bit more complicated than I originally thought...
-	PossibleMove_free(move);
-	return 0;
+	int depth = strtol(command + 10, NULL, 10);
+	printf("depth is %d\n", depth);
+	
+	if (strstr(command, "move")){
+		struct PossibleMove* move = readMove(command + 12, &exitcode);
+		printf("move read is ");
+		PossibleMove_print(move);
+		if (exitcode != 0){ // illegal input or illegal move
+			return exitcode;
+		}
+		else{
+			int score = alphabeta(move, depth, turn, INT_MIN, INT_MAX);
+			printf("%d\n", score);
+			PossibleMove_free(move);			
+		}
+	}
+
+	else{                   // castling move
+		int rookX, rookY;
+		exitcode = readTile(command + 19, &rookX, &rookY); 
+		if (exitcode == 0){
+			struct PossibleMove* castlingMove = PossibleMove_new(rookX, rookY, 0, 0, 0, &board);
+			int score = alphabeta(castlingMove, depth, turn, INT_MIN, INT_MAX);
+			printf("%d\n", score);
+			PossibleMove_free(castlingMove);	
+		}
+	}
+	return exitcode;
 }
 
 /*
@@ -758,6 +783,9 @@ int executeCommand(char* command){
 		if (str_equals(str, "get_best_moves")){
 			return printBestMoves(command);
 		}
+		if (str_equals(str, "get_score")){
+			return printMoveValue(command);
+		}	
 		if (str_equals(str,"save")){
 			return saveGame(command);
 		}
@@ -794,13 +822,16 @@ struct PossibleMove* minimax(){
 	struct Iterator iterator;
 	Iterator_init(&iterator, allPossibleMoves);
 	int bestScore = INT_MAX;
-	struct PossibleMove* bestMove;
+	struct PossibleMove* bestMove = NULL;
 	while(Iterator_hasNext(&iterator)){
 		struct PossibleMove* currentMove = (struct PossibleMove*)Iterator_next(&iterator);
 		int score = alphabeta(currentMove, maxRecursionDepth, !player1, INT_MIN, INT_MAX);
 		if (score < bestScore || (score == bestScore && rand()%2)){
 			bestScore = score;
-			bestMove = currentMove;
+			if (bestMove){
+				PossibleMove_free(bestMove);
+			}
+			bestMove = PossibleMove_clone(currentMove); // possible allocation error
 		}
 	}
 	LinkedList_free(allPossibleMoves);
@@ -833,7 +864,7 @@ void humanTurn(int player){
 		char command[64];
 		fgets(command, 63, stdin);
 		int error = executeCommand(command);
-		if (error == 2){ //breaks the loop when the "start" command is entered, so that the initial board will be checked for losing/tie conditions
+		if (error == 2){ //breaks the loop when the "start" command is entered, so that the initial board will always be checked for losing/tie conditions
 			break;
 		}
 		printError(error);
@@ -874,7 +905,7 @@ int main(){
 		if (isEndGame()){
 			break;
 		}
-		if (turn != player1 && gameMode == TWO_PLAYERS_MODE){
+		if (turn != player1 && gameMode == SINGLE_PLAYER_MODE){
 			computerTurn();
 		}
 		else{
