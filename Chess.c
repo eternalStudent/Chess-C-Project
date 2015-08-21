@@ -99,7 +99,7 @@ int alphabeta(struct PossibleMove* possibleMove, int depth, int player, int alph
 			}
 		}
 	}
-	LinkedList_freeAllButOne(possibleMoves, bestPossibleMove);
+	LinkedList_free(possibleMoves);
 	return extremum;
 }
 

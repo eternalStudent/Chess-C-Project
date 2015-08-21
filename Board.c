@@ -285,10 +285,10 @@ int Board_evalPiece(Board* board, int x, int y, int player){
  */
 int Board_getScore(Board* board, int player){
 	if (Board_isInCheck(board, player)){
-		return INT_MIN;
+		return INT_MAX;
 	}
 	if (Board_isInCheck(board, !player)){
-		return INT_MAX;
+		return INT_MIN;
 	}
 	int score = 0;
 	for (int x = 1; x <= Board_SIZE; x++){
