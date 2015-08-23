@@ -284,20 +284,64 @@ int Board_evalPiece(Board* board, int x, int y, int player){
  * @return: a numeric evaluation of the board
  */
 int Board_getScore(Board* board, int player){
-	if (Board_isInCheck(board, player)){
-		return INT_MAX;
-	}
-	if (Board_isInCheck(board, !player)){
+	struct LinkedList* possibleMoves = Board_getPossibleMoves(board, player);
+	if (Board_isInCheck(board, player) && LinkedList_length(possibleMoves) == 0){ //losing configuration
+		PossibleMoveList_free(possibleMoves);
 		return INT_MIN;
 	}
+	PossibleMoveList_free(possibleMoves);
+	
+	struct LinkedList* opponentPossibleMoves = Board_getPossibleMoves(board, player);
+	if (Board_isInCheck(board, !player) && LinkedList_length(opponentPossibleMoves) == 0){ //winning configuration
+		PossibleMoveList_free(opponentPossibleMoves);
+		return INT_MAX;
+	}
+	PossibleMoveList_free(opponentPossibleMoves);
 	int score = 0;
 	for (int x = 1; x <= Board_SIZE; x++){
 		for (int y = 1; y <= Board_SIZE; y++){
 			score += Board_evalPiece(board, x, y, player);
 		}
 	}
+	
 	return score;
 }
+
+int Board_evalMovesByPiece(Board* board, int x, int y, int player){
+	int color = Board_getColor(board, x, y);
+	if (player != color){
+		return 0;
+	}
+	char piece = Board_getPiece(board, x, y);
+	int value = 0;
+	switch (piece){
+		case Board_BLACK_PAWN:
+		case Board_WHITE_PAWN:   value =  1;   break;
+		case Board_BLACK_BISHOP:
+		case Board_WHITE_BISHOP: value =  11;   break;
+		case Board_BLACK_ROOK:
+		case Board_WHITE_ROOK:   value =  14;   break;
+		case Board_BLACK_QUEEN:
+		case Board_WHITE_QUEEN:  value =  25;   break;
+		case Board_BLACK_KNIGHT:
+		case Board_WHITE_KNIGHT: value =  4;   break;
+		case Board_BLACK_KING:
+		case Board_WHITE_KING:   value =  8; break;
+	}
+	return value;
+}
+
+int Board_getUpperBoundMoves(Board* board, int player){
+	int bound = 0;
+	for (int x = 1; x <= Board_SIZE; x++){
+		for (int y = 1; y <= Board_SIZE; y++){
+			bound += Board_evalMovesByPiece(board, x, y, player);
+		}
+	}
+	return bound;
+}
+
+
 
 /*
  * Checks if the player's king can be captured by an enemy pawn.

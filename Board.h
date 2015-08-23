@@ -43,6 +43,10 @@ int  Board_isEmpty   (Board* board, int x, int y);
 
 int Board_getColor(Board* board, int x, int y);
 
+int Board_evalMovesByPiece(Board* board, int x, int y, int player);
+
+int Board_getUpperBoundMoves(Board* board, int player);
+
 void Board_updateKingPosition (Board* board, int x, int y);
 
 int  Board_isInRange (int x, int y);

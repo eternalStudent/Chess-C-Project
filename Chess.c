@@ -55,7 +55,7 @@ void allocationFailed(){
  * The minimax AI algorithm.
  */
 int alphabeta(struct PossibleMove* possibleMove, int depth, int player, int alpha, int beta){
-	if (depth == 0){
+	if (depth == 1){
 		return Board_getScore(possibleMove->board, player);
 	}
 	Board* board = possibleMove->board;
@@ -72,19 +72,17 @@ int alphabeta(struct PossibleMove* possibleMove, int depth, int player, int alph
 		return Board_getScore(onlyMove->board, player);
 	}
 	
-	struct PossibleMove* bestPossibleMove = NULL;
 	int extremum = (player == player1)? INT_MIN: INT_MAX;;
 	struct Iterator iterator;
 	Iterator_init(&iterator, possibleMoves);
 	while (Iterator_hasNext(&iterator)) {
 		struct PossibleMove* currentPossibleMove = (struct PossibleMove*)Iterator_next(&iterator);
 		int score = alphabeta(currentPossibleMove, depth-1, player, alpha, beta);
-		if (	(player != player1 && score >  extremum) || 
-				(player == player1 && score <  extremum) || 
+		if (	(player != player1 && score <  extremum) || 
+				(player == player1 && score >  extremum) || 
 				(rand()%2          && score == extremum)
 			){
 			extremum = score;
-			bestPossibleMove = currentPossibleMove;
 		}
 		if (player == player1){
 			alpha = (score > alpha)? score: alpha;
@@ -438,6 +436,7 @@ int movePiece(char* command){
 	
 	if (!PossibleMoveList_contains(possibleMoves, move)){
 		PossibleMove_free(move);
+		PossibleMoveList_free(possibleMoves);
 		return -6;
 	}
 	
@@ -490,9 +489,33 @@ int castleRook(char* command){
 	return 0;
 }
 
+int computeBestDepth(int player){
+	int depth = 0;
+	int switcher = 1;
+	int bound = 1;
+	int upperBoundCurrentPlayer = Board_getUpperBoundMoves(&board, player);
+	int upperBoundOpponent = Board_getUpperBoundMoves(&board, !player);
+	while (bound <= 1000000){
+		if (switcher){
+			bound *= upperBoundCurrentPlayer;
+		}
+		else {
+			bound *= upperBoundOpponent;
+		}
+		depth += 1;
+		switcher = !switcher;
+	}
+	return depth;
+}
+
 int printBestMoves(char* command){
 	int depth;
-	sscanf(command, "get_best_moves %d", &depth);
+	if (command[15] == 'b'){
+		depth = computeBestDepth(turn);
+	}
+	else{
+		sscanf(command, "get_best_moves %d", &depth);
+	}
 	struct LinkedList* allPossibleMoves = Board_getPossibleMoves(&board, turn);
 	if (!allPossibleMoves){
 		return 1;
@@ -502,6 +525,7 @@ int printBestMoves(char* command){
 	Iterator_init(&iterator, allPossibleMoves);
 	struct LinkedList* bestMoves = PossibleMoveList_new();
 	if (!bestMoves){
+		PossibleMoveList_free(allPossibleMoves);
 		return 1;
 	}
 	while(Iterator_hasNext(&iterator)){
@@ -526,14 +550,26 @@ int printBestMoves(char* command){
 
 int printMoveValue(char* command){
 	int exitcode;
-	int depth = strtol(command + 10, NULL, 10);
-	printf("depth is %d\n", depth);
+	int depth;
+	int bestOffset = 0;
+	if (command[10] == 'b'){
+		depth = computeBestDepth(turn);
+		bestOffset = 3;
+	}
+	else{
+		depth = strtol(command + 10, NULL, 10);
+	}
 	
+	if (!depth || (!strstr(command, "move") && !strstr(command, "castle"))){
+		return -1;
+	}
 	if (strstr(command, "move")){
-		struct PossibleMove* move = readMove(command + 12, &exitcode);
-		printf("move read is ");
+		struct PossibleMove* move = readMove(command + 12 + bestOffset, &exitcode);
 		PossibleMove_print(move);
 		if (exitcode != 0){ // illegal input or illegal move
+			if (move){
+				PossibleMove_free(move);
+			}
 			return exitcode;
 		}
 		else{
@@ -572,6 +608,11 @@ int loadGame (char* command){
 	if (!gameFile){
 		return -9;
 	}
+	
+	// resetting movement arrays, assuming files loaded without info about them correspond 
+	// to a game where all of the kings and rooks have never moved  
+	memset((&board)->hasKingEverMoved, 0, sizeof((&board)->hasKingEverMoved));
+	memset((&board)->hasRookEverMoved, 0, sizeof((&board)->hasRookEverMoved[0][0]) * 2 * 2);
 	
 	while(fgets(buff, 50, gameFile) != 0){
 		if (strstr (buff, "<next_turn>")){
@@ -642,8 +683,9 @@ int loadGame (char* command){
 			}
 		}
 	}
-	Board_print(&board);
 	fclose(gameFile);
+	Board_print(&board);
+	printf("Enter game settings:\n");
 	return 0;
 }
 
@@ -825,7 +867,11 @@ struct PossibleMove* minimax(){
 	struct PossibleMove* bestMove = NULL;
 	while(Iterator_hasNext(&iterator)){
 		struct PossibleMove* currentMove = (struct PossibleMove*)Iterator_next(&iterator);
-		int score = alphabeta(currentMove, maxRecursionDepth, !player1, INT_MIN, INT_MAX);
+		int bestDepth = 0;
+		if (maxRecursionDepth == BEST){
+			bestDepth = computeBestDepth(!player1);
+		}
+		int score = (maxRecursionDepth == BEST)? alphabeta(currentMove, bestDepth, !player1, INT_MIN, INT_MAX) : alphabeta(currentMove, maxRecursionDepth, !player1, INT_MIN, INT_MAX);
 		if (score < bestScore || (score == bestScore && rand()%2)){
 			bestScore = score;
 			if (bestMove){
