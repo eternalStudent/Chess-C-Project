@@ -186,7 +186,9 @@ char stringToPiece(char* str, int color){
 int removePiece(char* command){
 	int x, y;
 	char tile[6];
-	sscanf(command, "rm %5s", tile);
+	if (sscanf(command, "rm %5s", tile) != 1){
+		return -1;
+	}
 	if (readTile(tile, &x, &y) == -1){
 		return -1;
 	}
@@ -213,7 +215,9 @@ int setPiece(char* command){
 	char tile[6];
 	char colorString[6];
 	char pieceString[7];
-	sscanf(command, "set %5s %5s %6s", tile, colorString, pieceString);
+	if (sscanf(command, "set %5s %5s %6s", tile, colorString, pieceString) != 3){
+		return -1;
+	}
 	
 	if (readTile(tile, &x, &y) == -1){
 		return -1;
@@ -280,7 +284,9 @@ int setDifficulty(char* command){
 	
 	char diff[6];
 	int depth;
-	sscanf(command, "difficulty %5s %d", diff, &depth);
+	if(sscanf(command, "difficulty %5s %d", diff, &depth) < 1){
+		return -1;
+	}
 	if (str_equals(diff, "best")){
 		maxRecursionDepth = BEST;
 		return 0;
@@ -309,7 +315,9 @@ int setUserColor(char* command){
 	}
 	
 	char colorString[6];
-	sscanf(command, "user_color %5s", colorString);
+	if (sscanf(command, "user_color %5s", colorString) != 1){
+		return -1;
+	}
 	int color = stringToColor(colorString);
 	if (color == -1){
 		return -1;
@@ -326,7 +334,9 @@ int setUserColor(char* command){
  */
 int setFirstPlayer(char* command){
 	char colorString[6];
-	sscanf(command, "next_player %5s", colorString);
+	if(sscanf(command, "next_player %5s", colorString) != 1){
+		return -1;
+	}
 	int color = stringToColor(colorString);
 	if (color == -1){
 		return -1;
@@ -345,7 +355,9 @@ int setFirstPlayer(char* command){
  */
 int printMovesOfPiece(char* command){
 	char tile[6];
-	sscanf(command, "get_moves %5s", tile);
+	if (sscanf(command, "get_moves %5s", tile) != 1){
+		return -1;
+	}
 	int x, y;
 	if (readTile(tile, &x, &y) == -1){
 		return -1;
@@ -373,20 +385,26 @@ struct PossibleMove* readMove(char* command, int* exitcode){
 	strncpy(promoteToAsString, "undefined", 10);
 	
 	*exitcode = 0;
-	sscanf(command, "move %5s to %5s %6s", fromTile, toTile, promoteToAsString);
+	if (sscanf(command, "move %5s to %5s %6s", fromTile, toTile, promoteToAsString) < 2){
+		*exitcode = -1;
+		return NULL;
+	}
 	int fromX, fromY, toX, toY;
 	if (readTile(fromTile, &fromX, &fromY) == -1 
 			|| readTile(toTile, &toX, &toY) == -1){
 		*exitcode = -1;
+		return NULL;
 	}
 	
 	if (!str_equals(promoteToAsString, "undefined")){
 		promoteTo = stringToPiece(promoteToAsString, turn);
 		if (!promoteTo){
 			*exitcode = -1; // the promotion was not input legally
+			return NULL;
 		}
 		if (promoteTo && (!Board_isFurthestRowForPlayer(turn, toY) || !pieceIsPawn(fromX, fromY))){
 			*exitcode = -6; // the promotion was input legally, but the move itself is illegal
+			return NULL;
 		}
 	}
 	
@@ -397,9 +415,11 @@ struct PossibleMove* readMove(char* command, int* exitcode){
 	if (!Board_isInRange(fromX, fromY) 
 			|| !Board_isInRange(toX, toY)){
 		*exitcode = -2;
+		return NULL;
 	}
 	if (Board_getColor(&board, fromX, fromY) != turn){
 		*exitcode = -5;
+		return NULL;
 	}
 	
 	struct PossibleMove* move = PossibleMove_new(fromX, fromY, toX, toY, promoteTo, &board);
@@ -450,7 +470,9 @@ int movePiece(char* command){
 
 int castleRook(char* command){
 	char rookTile[6];
-	sscanf(command, "castle %5s", rookTile);
+	if (sscanf(command, "castle %5s", rookTile) != 1){
+		return -1;
+	}
 	int rookX, rookY;
 	if (readTile(rookTile, &rookX, &rookY) == -1){
 		return -1;
@@ -489,12 +511,12 @@ int castleRook(char* command){
 	return 0;
 }
 
-int computeBestDepth(int player){
+int computeBestDepth(int currentPlayer){
 	int depth = 0;
 	int switcher = 1;
 	int bound = 1;
-	int upperBoundCurrentPlayer = Board_getUpperBoundMoves(&board, player);
-	int upperBoundOpponent = Board_getUpperBoundMoves(&board, !player);
+	int upperBoundCurrentPlayer = Board_getUpperBoundMoves(&board, currentPlayer);
+	int upperBoundOpponent = Board_getUpperBoundMoves(&board, !currentPlayer);
 	while (bound <= 1000000){
 		if (switcher){
 			bound *= upperBoundCurrentPlayer;
@@ -514,7 +536,9 @@ int printBestMoves(char* command){
 		depth = computeBestDepth(turn);
 	}
 	else{
-		sscanf(command, "get_best_moves %d", &depth);
+		if (sscanf(command, "get_best_moves %d", &depth) != 1){
+			return -1;
+		}
 	}
 	struct LinkedList* allPossibleMoves = Board_getPossibleMoves(&board, turn);
 	if (!allPossibleMoves){
@@ -537,7 +561,7 @@ int printBestMoves(char* command){
 			LinkedList_add(bestMoves, currentMove);
 			bestScore = score;
 		}
-		if (score == bestScore){
+		else if (score == bestScore){
 			LinkedList_add(bestMoves, currentMove);
 		}
 	}
@@ -565,7 +589,6 @@ int printMoveValue(char* command){
 	}
 	if (strstr(command, "move")){
 		struct PossibleMove* move = readMove(command + 12 + bestOffset, &exitcode);
-		PossibleMove_print(move);
 		if (exitcode != 0){ // illegal input or illegal move
 			if (move){
 				PossibleMove_free(move);
@@ -602,7 +625,9 @@ int loadGame (char* command){
 	int updatedGameMode = 0;
 	char path[1024];
 	char buff[51];
-	sscanf(command, "%4s %1023s", buff, path);
+	if (sscanf(command, "%4s %1023s", buff, path) != 2){
+		return -1;
+	}
 	
 	FILE* gameFile = fopen(path, "r");
 	if (!gameFile){
@@ -698,7 +723,9 @@ int loadGame (char* command){
 int saveGame (char* command){
 	char fileName[1024];
 	char buff[4];
-	sscanf(command, "%4s %1023s", buff, fileName);
+	if (sscanf(command, "%4s %1023s", buff, fileName) != 2){
+		return -1;
+	}
 	if (!strstr(fileName, ".xml")){
 		return -9;
 	}
@@ -860,19 +887,19 @@ void printError(int error){
 }
 
 struct PossibleMove* minimax(){
-	struct LinkedList* allPossibleMoves = Board_getPossibleMoves(&board, !player1);
+	struct LinkedList* allPossibleMoves = Board_getPossibleMoves(&board, turn);
 	struct Iterator iterator;
 	Iterator_init(&iterator, allPossibleMoves);
-	int bestScore = INT_MAX;
+	int bestScore = INT_MIN;
 	struct PossibleMove* bestMove = NULL;
 	while(Iterator_hasNext(&iterator)){
 		struct PossibleMove* currentMove = (struct PossibleMove*)Iterator_next(&iterator);
 		int bestDepth = 0;
 		if (maxRecursionDepth == BEST){
-			bestDepth = computeBestDepth(!player1);
+			bestDepth = computeBestDepth(turn);
 		}
-		int score = (maxRecursionDepth == BEST)? alphabeta(currentMove, bestDepth, !player1, INT_MIN, INT_MAX) : alphabeta(currentMove, maxRecursionDepth, !player1, INT_MIN, INT_MAX);
-		if (score < bestScore || (score == bestScore && rand()%2)){
+		int score = (maxRecursionDepth == BEST)? alphabeta(currentMove, bestDepth, turn, INT_MIN, INT_MAX) : alphabeta(currentMove, maxRecursionDepth, turn, INT_MIN, INT_MAX);
+		if (score > bestScore || (score == bestScore && rand()%2)){
 			bestScore = score;
 			if (bestMove){
 				PossibleMove_free(bestMove);
