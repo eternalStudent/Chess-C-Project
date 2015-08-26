@@ -1,14 +1,7 @@
 #ifndef POSSIBLEMOVE_H
 #define POSSIBLEMOVE_H
 
-typedef struct Board{
-	char matrix[8][8];
-	int kingX[2];
-	int kingY[2];
-	int hasKingEverMoved[2];
-	int hasRookEverMoved[2][2];
-} Board;
-
+#include "Board.h"
 
 struct PossibleMove{
 	int fromX, fromY, toX, toY;

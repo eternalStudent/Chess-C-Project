@@ -581,18 +581,18 @@ int printMoveValue(char* command){
 		bestOffset = 3;
 	}
 	else{
-		depth = strtol(command + 10, NULL, 10);
+		if (sscanf(command, "get_score %d", &depth) < 0){
+			return -1;
+		}
 	}
 	
-	if (!depth || (!strstr(command, "move") && !strstr(command, "castle"))){
+	if (!strstr(command, "move") && !strstr(command, "castle")){
 		return -1;
 	}
+	
 	if (strstr(command, "move")){
 		struct PossibleMove* move = readMove(command + 12 + bestOffset, &exitcode);
 		if (exitcode != 0){ // illegal input or illegal move
-			if (move){
-				PossibleMove_free(move);
-			}
 			return exitcode;
 		}
 		else{
@@ -601,8 +601,8 @@ int printMoveValue(char* command){
 			PossibleMove_free(move);			
 		}
 	}
-
-	else{                   // castling move
+	// castling move
+	else{
 		int rookX, rookY;
 		exitcode = readTile(command + 19, &rookX, &rookY); 
 		if (exitcode == 0){

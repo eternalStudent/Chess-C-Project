@@ -21,6 +21,16 @@
 #define BLACK 0
 #define WHITE 1
 
+
+typedef struct Board{
+	char matrix[8][8];
+	int kingX[2];
+	int kingY[2];
+	int hasKingEverMoved[2];
+	int hasRookEverMoved[2][2];
+} Board;
+
+
 Board* Board_new();
 
 int Board_isFurthestRowForPlayer (int player, int y);

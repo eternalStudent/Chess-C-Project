@@ -284,26 +284,24 @@ int Board_evalPiece(Board* board, int x, int y, int player){
  * @return: a numeric evaluation of the board
  */
 int Board_getScore(Board* board, int player){
+	 //losing configuration
 	struct LinkedList* possibleMoves = Board_getPossibleMoves(board, player);
-	if (Board_isInCheck(board, player) && LinkedList_length(possibleMoves) == 0){ //losing configuration
+	if (Board_isInCheck(board, player) && LinkedList_length(possibleMoves) == 0){
 		PossibleMoveList_free(possibleMoves);
 		return INT_MIN;
 	}
 	PossibleMoveList_free(possibleMoves);
-	
-	struct LinkedList* opponentPossibleMoves = Board_getPossibleMoves(board, player);
-	if (Board_isInCheck(board, !player) && LinkedList_length(opponentPossibleMoves) == 0){ //winning configuration
-		PossibleMoveList_free(opponentPossibleMoves);
+	//winning configuration
+	if (Board_isInCheck(board, !player)){ 
 		return INT_MAX;
 	}
-	PossibleMoveList_free(opponentPossibleMoves);
+	//otherwise
 	int score = 0;
 	for (int x = 1; x <= Board_SIZE; x++){
 		for (int y = 1; y <= Board_SIZE; y++){
 			score += Board_evalPiece(board, x, y, player);
 		}
 	}
-	
 	return score;
 }
 
