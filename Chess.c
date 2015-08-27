@@ -106,7 +106,10 @@ int alphabeta(struct PossibleMove* possibleMove, int depth, int player, int alph
  */
 int readTile(char* str, int* x, int* y){
 	char ch;
-	if (sscanf(str, "<%c,%1d>", &ch, y) < 0){
+	if (sscanf(str, "<%c,%1d>", &ch, y) != 2){
+		return -1;
+	}
+	if (*y > 8 || *y < 1 || ch < 97 || ch > 104){
 		return -1;
 	}
 	*x = ch-96;
@@ -283,7 +286,7 @@ int setDifficulty(char* command){
 	}
 	
 	char diff[6];
-	int depth;
+	int depth = -1; //initializing to non-relevant value to avoid problems with illegal inputs
 	if(sscanf(command, "difficulty %5s %d", diff, &depth) < 1){
 		return -1;
 	}
@@ -892,12 +895,12 @@ struct PossibleMove* minimax(){
 	Iterator_init(&iterator, allPossibleMoves);
 	int bestScore = INT_MIN;
 	struct PossibleMove* bestMove = NULL;
+	int bestDepth = 0;
+	if (maxRecursionDepth == BEST){
+		bestDepth = computeBestDepth(turn);
+	}
 	while(Iterator_hasNext(&iterator)){
 		struct PossibleMove* currentMove = (struct PossibleMove*)Iterator_next(&iterator);
-		int bestDepth = 0;
-		if (maxRecursionDepth == BEST){
-			bestDepth = computeBestDepth(turn);
-		}
 		int score = (maxRecursionDepth == BEST)? alphabeta(currentMove, bestDepth, turn, INT_MIN, INT_MAX) : alphabeta(currentMove, maxRecursionDepth, turn, INT_MIN, INT_MAX);
 		if (score > bestScore || (score == bestScore && rand()%2)){
 			bestScore = score;

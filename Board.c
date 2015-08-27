@@ -285,12 +285,14 @@ int Board_evalPiece(Board* board, int x, int y, int player){
  */
 int Board_getScore(Board* board, int player){
 	 //losing configuration
-	struct LinkedList* possibleMoves = Board_getPossibleMoves(board, player);
-	if (Board_isInCheck(board, player) && LinkedList_length(possibleMoves) == 0){
+	if (Board_isInCheck(board, player)){
+		struct LinkedList* possibleMoves = Board_getPossibleMoves(board, player);
+		if (LinkedList_length(possibleMoves) == 0){
+			PossibleMoveList_free(possibleMoves);
+			return INT_MIN;
+		}
 		PossibleMoveList_free(possibleMoves);
-		return INT_MIN;
 	}
-	PossibleMoveList_free(possibleMoves);
 	//winning configuration
 	if (Board_isInCheck(board, !player)){ 
 		return INT_MAX;
