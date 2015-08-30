@@ -284,7 +284,7 @@ int Board_evalPiece(Board* board, int x, int y, int player){
  * @return: a numeric evaluation of the board
  */
 int Board_getScore(Board* board, int player){
-	 //losing configuration
+	//losing configuration
 	if (Board_isInCheck(board, player)){
 		struct LinkedList* possibleMoves = Board_getPossibleMoves(board, player);
 		if (LinkedList_length(possibleMoves) == 0){
@@ -419,6 +419,12 @@ static int canBeCapturedByABishopRookOrQueen(Board* board, int player){
 				if (Board_isEmpty(board, x, y)){
 					continue;
 				}
+				if (toupper(Board_getPiece(board, x, y)) != Board_BLACK_QUEEN &&
+					toupper(Board_getPiece(board, x, y)) != Board_BLACK_ROOK &&
+					toupper(Board_getPiece(board, x, y)) != Board_BLACK_BISHOP){
+					break;
+				}
+
 				if (toupper(Board_getPiece(board, x, y)) == Board_BLACK_QUEEN){
 					return 1;
 				}

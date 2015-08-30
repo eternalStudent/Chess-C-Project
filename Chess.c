@@ -684,7 +684,7 @@ int loadGame (char* command){
 				}
 			}
 		}
-		else if (strstr(buff, "row")){
+		if (strstr(buff, "<row_")){
 			int y = (int)buff[7] - 48;
 			for (int x = 1; x <= 8; x++){
 				char piece = buff[8+x];
