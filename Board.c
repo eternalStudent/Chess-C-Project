@@ -250,6 +250,33 @@ Board* Board_getPossibleBoard(Board* board, struct PossibleMove* possibleMove){
 }
 
 /*
+ * Auxiliary function for checking whether a given player has any possible moves on a given board configuration. 
+ *
+ * @params: (player) - the relevant player 
+ *			(board) - the relevant board configuration
+ * @return: 1 if (player) has any possible moves on the (board) configuration, 0 otherwise
+ */
+int Board_possibleMovesExist (Board* board, int player){
+	for (int x = 1; x <= Board_SIZE; x++){
+		for (int y = 1; y <= Board_SIZE; y++){
+			if (Board_getColor(board, x, y) != player){
+				continue;
+			}
+			struct LinkedList* pieceMoves = Board_getPossibleMovesOfPiece(board, x, y);
+			if (!pieceMoves){
+				return -1; //not sure how to handle possible allocation error
+			}
+			if (LinkedList_length(pieceMoves) > 0){
+				PossibleMoveList_free(pieceMoves);
+				return 1;
+			}
+			PossibleMoveList_free(pieceMoves);
+		}
+	}
+	return 0;
+}
+
+/*
  * Evaluates a single piece on the board according to the provided scoring function. 
  *
  * @params: (x,y) - the coordinates of the piece to be evaluated
@@ -284,18 +311,19 @@ int Board_evalPiece(Board* board, int x, int y, int player){
  * @return: a numeric evaluation of the board
  */
 int Board_getScore(Board* board, int player){
+	int playerHasPossibleMoves = Board_possibleMovesExist(board, player);
+	
 	//losing configuration
-	if (Board_isInCheck(board, player)){
-		struct LinkedList* possibleMoves = Board_getPossibleMoves(board, player);
-		if (LinkedList_length(possibleMoves) == 0){
-			PossibleMoveList_free(possibleMoves);
-			return INT_MIN;
-		}
-		PossibleMoveList_free(possibleMoves);
+	if (Board_isInCheck(board, player) && !playerHasPossibleMoves){
+		return INT_MIN;
 	}
 	//winning configuration
 	if (Board_isInCheck(board, !player)){ 
 		return INT_MAX;
+	}
+	//tie 
+	if (!playerHasPossibleMoves){
+		return 0;
 	}
 	//otherwise
 	int score = 0;
@@ -309,22 +337,22 @@ int Board_getScore(Board* board, int player){
 
 int Board_evalMovesByPiece(Board* board, int x, int y, int player){
 	int color = Board_getColor(board, x, y);
-	if (player != color){
+	if (color != player){
 		return 0;
 	}
 	char piece = Board_getPiece(board, x, y);
 	int value = 0;
 	switch (piece){
 		case Board_BLACK_PAWN:
-		case Board_WHITE_PAWN:   value =  1;   break;
+		case Board_WHITE_PAWN:   value =  12;   break;
 		case Board_BLACK_BISHOP:
-		case Board_WHITE_BISHOP: value =  11;   break;
+		case Board_WHITE_BISHOP: value =  13;   break;
 		case Board_BLACK_ROOK:
 		case Board_WHITE_ROOK:   value =  14;   break;
 		case Board_BLACK_QUEEN:
-		case Board_WHITE_QUEEN:  value =  25;   break;
+		case Board_WHITE_QUEEN:  value =  28;   break;
 		case Board_BLACK_KNIGHT:
-		case Board_WHITE_KNIGHT: value =  4;   break;
+		case Board_WHITE_KNIGHT: value =  8;   break;
 		case Board_BLACK_KING:
 		case Board_WHITE_KING:   value =  8; break;
 	}
@@ -424,7 +452,6 @@ static int canBeCapturedByABishopRookOrQueen(Board* board, int player){
 					toupper(Board_getPiece(board, x, y)) != Board_BLACK_BISHOP){
 					break;
 				}
-
 				if (toupper(Board_getPiece(board, x, y)) == Board_BLACK_QUEEN){
 					return 1;
 				}
@@ -641,7 +668,6 @@ int Board_clearHorizontalPathExists(Board* board, int fromX, int toX, int y){
 		}
 	}
 	return 1;
-	
 }
 
 static struct LinkedList* getCastlingMoves(Board* board, int x, int y){

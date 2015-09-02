@@ -236,6 +236,9 @@ int setPiece(char* command){
 	if (PieceCounter_isAtMax(counter, piece, x, y)){
 		return -8;
 	}
+	if ((piece == Board_BLACK_PAWN || piece == Board_WHITE_PAWN) && Board_isFurthestRowForPlayer(color, y)){
+		return -8;
+	}
 	
 	char removedPiece = Board_getPiece(&board, x, y);
 	PieceCounter_update(counter, removedPiece, -1, x, y);
@@ -713,7 +716,6 @@ int loadGame (char* command){
 	}
 	fclose(gameFile);
 	Board_print(&board);
-	printf("Enter game settings:\n");
 	return 0;
 }
 
@@ -834,7 +836,8 @@ int executeCommand(char* command){
 			return 0;
 		}
 		if (str_equals(str, "start")){
-			if(PieceCounter_kingIsMissing(counter)){
+			if(PieceCounter_kingIsMissing(counter) 
+				|| (Board_isInCheck(&board, player1) && Board_isInCheck(&board, player1))){
 				return -7;
 			}	
 			turn = first;
@@ -933,6 +936,9 @@ void computerTurn(){
  */
 void humanTurn(int player){
 	while (turn == player){
+		if (state == SETTINGS){
+			printf("Enter game settings:\n");
+		}
 		if (state == GAME){
 			printf(player == BLACK? "Black": "White");
 			printf(" player - enter your move:\n");
@@ -975,7 +981,6 @@ void printEndGameResults(){
 int main(){
 	initialize();
 	Board_print(&board);
-	printf("Enter game settings:\n");
 	
 	while (1){
 		if (isEndGame()){
