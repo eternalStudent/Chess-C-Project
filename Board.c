@@ -312,18 +312,26 @@ int Board_evalPiece(Board* board, int x, int y, int player){
  */
 int Board_getScore(Board* board, int player){
 	int playerHasPossibleMoves = Board_possibleMovesExist(board, player);
-	
-	//losing configuration
-	if (Board_isInCheck(board, player) && !playerHasPossibleMoves){
-		return INT_MIN;
+	if (playerHasPossibleMoves == -1){ //allocation error occured in Board_possibleMovesExist
+		return -10001;
+	}
+	int opponentHasPossibleMoves = Board_possibleMovesExist(board, !player);
+	if (opponentHasPossibleMoves == -1){
+		return -10001;
+	}
+	if (!playerHasPossibleMoves){
+		//losing configuration
+		if (Board_isInCheck(board, player)){
+			return -10000;
+		}
+		//tie
+		else{
+			return 0;
+		}
 	}
 	//winning configuration
-	if (Board_isInCheck(board, !player)){ 
-		return INT_MAX;
-	}
-	//tie 
-	if (!playerHasPossibleMoves){
-		return 0;
+	if (Board_isInCheck(board, !player) && !opponentHasPossibleMoves){ 
+		return 10000;
 	}
 	//otherwise
 	int score = 0;
@@ -532,7 +540,12 @@ static struct LinkedList* getPawnMoves(Board* board, int fromX, int fromY){
 	for (int sideward = -1; sideward <= 1; sideward++){
 		int toX = fromX+sideward;
 		int toY = fromY+forward;
+		char enemyKing = (player == WHITE)? 'K' : 'k';
 		if (!Board_isInRange(toX, toY)){
+			continue;
+		}
+		// the enemy king is never actually captured
+		if (Board_getPiece(board, toX, toY) == enemyKing){
 			continue;
 		}
 		
@@ -582,12 +595,17 @@ static struct LinkedList* getPawnMoves(Board* board, int fromX, int fromY){
 int addMoveIfLegal(struct LinkedList* possibleMoves, Board* board, 
 			int fromX, int fromY, int sideward, int forward){
 	int player = Board_getColor(board, fromX, fromY);
-	int toX = fromX+sideward;
-	int toY = fromY+forward;
+	int toX = fromX + sideward;
+	int toY = fromY + forward;
+	char enemyKing = (player == WHITE)? 'K' : 'k';
 	if (!Board_isInRange(toX, toY)){
 		return -1;
 	}
 	if (Board_getColor(board, toX, toY) == player){
+		return -1;
+	}
+	// the enemy king is never actually captured
+	if (Board_getPiece(board, toX, toY) == enemyKing){
 		return -1;
 	}
 	struct PossibleMove* move = PossibleMove_new(fromX, fromY, toX, toY, 0, board); //Allocation error not handled

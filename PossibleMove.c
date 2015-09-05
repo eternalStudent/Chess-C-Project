@@ -45,7 +45,7 @@ int PossibleMove_equals(struct PossibleMove* this, struct PossibleMove* other){
  */
 void PossibleMove_print(struct PossibleMove* move){
 	if (move->toX != 0){
-		printf("move <%c,%d> to <%c,%d>", move->fromX+96, move->fromY, move->toX+96, move->toY);
+		printf("<%c,%d> to <%c,%d>", move->fromX+96, move->fromY, move->toX+96, move->toY);
 		switch(move->promotion){
 			case 'b':
 			case 'B': printf(" bishop\n"); break;

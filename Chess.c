@@ -54,16 +54,22 @@ void allocationFailed(){
 /*
  * The minimax AI algorithm.
  */
-int alphabeta(struct PossibleMove* possibleMove, int depth, int player, int alpha, int beta){
-	if (depth == 1){
-		return Board_getScore(possibleMove->board, player);
+int alphabeta(struct PossibleMove* possibleMove, int depth, int player, int alpha, int beta, int switcher){
+	int thisBoardScore = Board_getScore(possibleMove->board, player);
+	// maximum depth reached or game is over or allocation error occured in Board_getScore
+	if (depth == 1 || thisBoardScore == 10000 || thisBoardScore == -10000 || thisBoardScore == -10001){ 
+		return thisBoardScore;
 	}
+	
 	Board* board = possibleMove->board;
-	struct LinkedList* possibleMoves = Board_getPossibleMoves(board, player);
+	struct LinkedList* possibleMoves = (switcher == 1)? Board_getPossibleMoves(board, player) : Board_getPossibleMoves(board, !player);
+	if (!possibleMoves){
+		return -10001;
+	}
 	//terminal node
 	if (LinkedList_length(possibleMoves) == 0){
 		LinkedList_free(possibleMoves);
-		return Board_getScore(possibleMove->board, player);
+		return thisBoardScore;
 	}
 	//single child node
 	if (LinkedList_length(possibleMoves) == 1){
@@ -71,19 +77,28 @@ int alphabeta(struct PossibleMove* possibleMove, int depth, int player, int alph
 		LinkedList_freeAllButOne(possibleMoves, onlyMove);
 		return Board_getScore(onlyMove->board, player);
 	}
-	
-	int extremum = (player == player1)? INT_MIN: INT_MAX;;
+
+	int extremum = (player == player1)? INT_MIN : INT_MAX;
 	struct Iterator iterator;
 	Iterator_init(&iterator, possibleMoves);
 	while (Iterator_hasNext(&iterator)) {
 		struct PossibleMove* currentPossibleMove = (struct PossibleMove*)Iterator_next(&iterator);
-		int score = alphabeta(currentPossibleMove, depth-1, player, alpha, beta);
+		int score = alphabeta(currentPossibleMove, depth-1, player, alpha, beta, !switcher);
+		if (score == -10001){ //allocation error occured
+			extremum = score;
+			break;
+		}
 		if (	(player != player1 && score <  extremum) || 
 				(player == player1 && score >  extremum) || 
 				(rand()%2          && score == extremum)
 			){
 			extremum = score;
 		}
+		//game over - no need to evaluate further moves
+		if (extremum == 10000 || extremum == -10000){
+			break;
+		}
+		//alpha-beta pruning
 		if (player == player1){
 			alpha = (score > alpha)? score: alpha;
 			if (alpha >= beta){
@@ -96,6 +111,7 @@ int alphabeta(struct PossibleMove* possibleMove, int depth, int player, int alph
 				break;
 			}
 		}
+
 	}
 	LinkedList_free(possibleMoves);
 	return extremum;
@@ -550,7 +566,7 @@ int printBestMoves(char* command){
 	if (!allPossibleMoves){
 		return 1;
 	}
-	int bestScore = (turn == player1)? INT_MIN: INT_MAX;
+	int bestScore = INT_MIN;
 	struct Iterator iterator;
 	Iterator_init(&iterator, allPossibleMoves);
 	struct LinkedList* bestMoves = PossibleMoveList_new();
@@ -560,9 +576,8 @@ int printBestMoves(char* command){
 	}
 	while(Iterator_hasNext(&iterator)){
 		struct PossibleMove* currentMove = (struct PossibleMove*)Iterator_next(&iterator);
-		int score = alphabeta(currentMove, depth, turn, INT_MIN, INT_MAX);
-		if (    (score < bestScore && turn != player1) ||
-				(score > bestScore && turn == player1)) {
+		int score = alphabeta(currentMove, depth, turn, INT_MIN, INT_MAX, 0);
+		if (score > bestScore) {
 			LinkedList_removeAll(bestMoves);
 			LinkedList_add(bestMoves, currentMove);
 			bestScore = score;
@@ -602,7 +617,7 @@ int printMoveValue(char* command){
 			return exitcode;
 		}
 		else{
-			int score = alphabeta(move, depth, turn, INT_MIN, INT_MAX);
+			int score = alphabeta(move, depth, turn, INT_MIN, INT_MAX, 0);
 			printf("%d\n", score);
 			PossibleMove_free(move);			
 		}
@@ -613,7 +628,7 @@ int printMoveValue(char* command){
 		exitcode = readTile(command + 19, &rookX, &rookY); 
 		if (exitcode == 0){
 			struct PossibleMove* castlingMove = PossibleMove_new(rookX, rookY, 0, 0, 0, &board);
-			int score = alphabeta(castlingMove, depth, turn, INT_MIN, INT_MAX);
+			int score = alphabeta(castlingMove, depth, turn, INT_MIN, INT_MAX, 0);
 			printf("%d\n", score);
 			PossibleMove_free(castlingMove);	
 		}
@@ -904,7 +919,10 @@ struct PossibleMove* minimax(){
 	}
 	while(Iterator_hasNext(&iterator)){
 		struct PossibleMove* currentMove = (struct PossibleMove*)Iterator_next(&iterator);
-		int score = (maxRecursionDepth == BEST)? alphabeta(currentMove, bestDepth, turn, INT_MIN, INT_MAX) : alphabeta(currentMove, maxRecursionDepth, turn, INT_MIN, INT_MAX);
+		int score = (maxRecursionDepth == BEST)? alphabeta(currentMove, bestDepth, turn, INT_MIN, INT_MAX, 0) : alphabeta(currentMove, maxRecursionDepth, turn, INT_MIN, INT_MAX, 0);
+		if (score == -10001){ //allocation error occured
+			return NULL;
+		}
 		if (score > bestScore || (score == bestScore && rand()%2)){
 			bestScore = score;
 			if (bestMove){
@@ -922,6 +940,9 @@ struct PossibleMove* minimax(){
  */
 void computerTurn(){
 	struct PossibleMove* bestMove = minimax();
+	if (!bestMove){
+		allocationFailed();
+	}
 	printf("Computer: ");
 	PossibleMove_print(bestMove);
 	printf("\n");
@@ -954,19 +975,19 @@ void humanTurn(int player){
 }
 
 int isEndGame(){
-	int endGame = 0;
 	struct LinkedList* allPossibleMoves = Board_getPossibleMoves(&board, turn);
 	if (!allPossibleMoves){
 		allocationFailed();
 	}
-	if (Board_isInCheck(&board, turn)){
-		printf("Check\n");
-	}
 	if (LinkedList_length(allPossibleMoves) == 0){
-		endGame = 1;
+		PossibleMoveList_free(allPossibleMoves);
+		return 1;
+	}
+	if (Board_isInCheck(&board, turn)){
+		printf("Check!\n");
 	}
 	PossibleMoveList_free(allPossibleMoves);
-	return endGame;
+	return 0;
 }
 
 void printEndGameResults(){
