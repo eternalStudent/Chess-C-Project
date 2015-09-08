@@ -74,8 +74,9 @@ int alphabeta(struct PossibleMove* possibleMove, int depth, int player, int alph
 	//single child node
 	if (LinkedList_length(possibleMoves) == 1){
 		struct PossibleMove* onlyMove = PossibleMoveList_first(possibleMoves);
-		LinkedList_freeAllButOne(possibleMoves, onlyMove);
-		return Board_getScore(onlyMove->board, player);
+		int score = Board_getScore(onlyMove->board, player);
+		LinkedList_free(possibleMoves);
+		return score;
 	}
 
 	int extremum = (player == player1)? INT_MIN : INT_MAX;
@@ -909,6 +910,9 @@ void printError(int error){
 
 struct PossibleMove* minimax(){
 	struct LinkedList* allPossibleMoves = Board_getPossibleMoves(&board, turn);
+	if (!allPossibleMoves){
+		allocationFailed();
+	}
 	struct Iterator iterator;
 	Iterator_init(&iterator, allPossibleMoves);
 	int bestScore = INT_MIN;
@@ -920,7 +924,8 @@ struct PossibleMove* minimax(){
 	while(Iterator_hasNext(&iterator)){
 		struct PossibleMove* currentMove = (struct PossibleMove*)Iterator_next(&iterator);
 		int score = (maxRecursionDepth == BEST)? alphabeta(currentMove, bestDepth, turn, INT_MIN, INT_MAX, 0) : alphabeta(currentMove, maxRecursionDepth, turn, INT_MIN, INT_MAX, 0);
-		if (score == -10001){ //allocation error occured
+		if (score == -10001){ //allocation error occured in alphabeta
+			PossibleMoveList_free(allPossibleMoves);
 			return NULL;
 		}
 		if (score > bestScore || (score == bestScore && rand()%2)){
@@ -928,7 +933,10 @@ struct PossibleMove* minimax(){
 			if (bestMove){
 				PossibleMove_free(bestMove);
 			}
-			bestMove = PossibleMove_clone(currentMove); // possible allocation error
+			bestMove = PossibleMove_clone(currentMove);
+			if (!bestMove){
+				return NULL;
+			}
 		}
 	}
 	LinkedList_free(allPossibleMoves);

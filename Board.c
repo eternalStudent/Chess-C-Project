@@ -608,7 +608,10 @@ int addMoveIfLegal(struct LinkedList* possibleMoves, Board* board,
 	if (Board_getPiece(board, toX, toY) == enemyKing){
 		return -1;
 	}
-	struct PossibleMove* move = PossibleMove_new(fromX, fromY, toX, toY, 0, board); //Allocation error not handled
+	struct PossibleMove* move = PossibleMove_new(fromX, fromY, toX, toY, 0, board);
+	if (!move){
+		return -2;
+	}
 	if (!Board_isInCheck(move->board, player)){
 		LinkedList_add(possibleMoves, move);
 	}
@@ -636,7 +639,10 @@ static struct LinkedList* getBishopMoves(Board* board, int fromX, int fromY){
 		for (int forward = -1; forward <= 1; forward += 2){
 			for (int dist = 1; dist < Board_SIZE; dist++){
 				int cantMoveFurther = addMoveIfLegal(possibleMoves, board, fromX, fromY, dist*sideward, dist*forward);
-				if (cantMoveFurther){
+				if(cantMoveFurther == -2){
+					return NULL;
+				}
+				if (cantMoveFurther == -1){
 					break;
 				}
 			}
@@ -666,7 +672,7 @@ int Board_clearAndSafeHorizontalPathExistsForKing(Board* board, int fromX, int t
 		}
 		struct PossibleMove* step = PossibleMove_new(fromX+(i-1)*adjustment, y, fromX+adjustment*i, y, 0, board);
 		if(!step){
-			// allocation error not handled
+			return -1;
 		}
 		if(Board_isInCheck(step->board, player)){
 			exitcode = 0;
@@ -697,7 +703,7 @@ static struct LinkedList* getCastlingMoves(Board* board, int x, int y){
 		return NULL;
 	}
 	if ((!pieceIsRook(board, x, y))
-		||(y != legalY) 
+		|| (y != legalY) 
 		|| (board->hasKingEverMoved[player])
 		|| (Board_isInCheck(board, player))
 		|| (board->hasRookEverMoved[player][0] && board->hasRookEverMoved[player][1])){	
@@ -705,8 +711,13 @@ static struct LinkedList* getCastlingMoves(Board* board, int x, int y){
 	}
 	int kingDestX = (x == 1)? 3 : 7;
 	int positionInRookMovementArray = (x == 1)? 0 : 1;
+	int clearPathExistsForKing = Board_clearAndSafeHorizontalPathExistsForKing(board, 5, kingDestX, y);
+	if (clearPathExistsForKing == -1){
+		return NULL;
+	}
+	
 	if (Board_clearHorizontalPathExists(board, 5, x, y) 
-		&& Board_clearAndSafeHorizontalPathExistsForKing(board, 5, kingDestX, y) 
+		&& clearPathExistsForKing 
 		&& board->hasRookEverMoved[player][positionInRookMovementArray] == 0){
 		struct PossibleMove* newCastlingMove = PossibleMove_new(x, y, 0, 0, 0, board);
 		if(!newCastlingMove){
@@ -730,7 +741,10 @@ static struct LinkedList* getRookMoves(Board* board, int fromX, int fromY){
 	for (int sideward = -1; sideward <= 1; sideward += 2){
 		for (int dist = 1; dist < Board_SIZE; dist++){
 			int cantMoveFurther = addMoveIfLegal(possibleMoves, board, fromX, fromY, sideward*dist, 0);
-			if (cantMoveFurther){
+			if (cantMoveFurther == -2){
+				return NULL;
+			}
+			if (cantMoveFurther == -1){
 				break;
 			}
 		}
@@ -738,7 +752,10 @@ static struct LinkedList* getRookMoves(Board* board, int fromX, int fromY){
 	for (int forward = -1; forward <= 1; forward += 2){
 		for (int dist = 1; dist < Board_SIZE; dist++){
 			int cantMoveFurther = addMoveIfLegal(possibleMoves, board, fromX, fromY, 0, forward*dist);
-			if (cantMoveFurther){
+			if (cantMoveFurther == -2){
+				return NULL;
+			}
+			if (cantMoveFurther == -1){
 				break;
 			}
 		}
@@ -749,7 +766,6 @@ static struct LinkedList* getRookMoves(Board* board, int fromX, int fromY){
 		return NULL;
 	}
 	LinkedList_concatenate(possibleMoves, castlingMoves);
-	
 	return possibleMoves;
 }
 
@@ -787,12 +803,18 @@ static struct LinkedList* getKnightMoves(Board* board, int fromX, int fromY){
 	}
 	for (int sideward = -1; sideward <= 1; sideward += 2){
 		for (int forward = -2; forward <= 2; forward += 4){
-			addMoveIfLegal(possibleMoves, board, fromX, fromY, sideward, forward);
+			int error = addMoveIfLegal(possibleMoves, board, fromX, fromY, sideward, forward);
+			if (error == -2){
+				return NULL;
+			}
 		}
 	}
 	for (int sideward = -2; sideward <= 2; sideward += 4){
 		for (int forward = -1; forward <= 1; forward += 2){
-			addMoveIfLegal(possibleMoves, board, fromX, fromY, sideward, forward);
+			int error = addMoveIfLegal(possibleMoves, board, fromX, fromY, sideward, forward);
+			if (error == -2){
+				return NULL;
+			}
 		}
 	}
 	return possibleMoves;
@@ -810,7 +832,10 @@ static struct LinkedList* getKingMoves(Board* board, int fromX, int fromY){
 	}
 	for (int sideward = -1; sideward <= 1; sideward++){
 		for (int forward = -1; forward <= 1; forward++){
-			addMoveIfLegal(possibleMoves, board, fromX, fromY, sideward, forward);
+			int error = addMoveIfLegal(possibleMoves, board, fromX, fromY, sideward, forward);
+			if (error == -2){
+				return NULL;
+			}
 		}
 	}
 	
@@ -862,6 +887,7 @@ struct LinkedList* Board_getPossibleMovesOfPiece(Board* board, int x, int y){
  * @return: a list of all moves currently possible for the player, or NULL if any allocation errors occurred 
  */
 struct LinkedList* Board_getPossibleMoves(Board* board, int player){
+	int gotCastlingMoves = 0;
 	struct LinkedList* possibleMoves = PossibleMoveList_new();
 	if (!possibleMoves){
 		return NULL;
