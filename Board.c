@@ -61,11 +61,20 @@ void Board_init(Board* board){
 
 /*
  * @return: 1 if the piece located at (x,y) 
- * 			on the main playing board is a rook, 0 otherwise 
+ * 			on (board) is a rook, 0 otherwise 
  */
 int pieceIsRook(Board* board, int x, int y){
 	char piece = Board_getPiece(board, x, y);
 	return (piece == 'r' || piece == 'R');
+}
+
+/*
+ * @return: 1 if the piece located at (x,y) 
+ * 			on (board) is a king, 0 otherwise 
+ */
+int pieceIsKing(Board* board, int x, int y){
+	char piece = Board_getPiece(board, x, y);
+	return (piece == 'k' || piece == 'K');
 }
 
 /*
@@ -262,9 +271,9 @@ int Board_possibleMovesExist (Board* board, int player){
 			if (Board_getColor(board, x, y) != player){
 				continue;
 			}
-			struct LinkedList* pieceMoves = Board_getPossibleMovesOfPiece(board, x, y);
+			struct LinkedList* pieceMoves = Board_getPossibleMovesOfPiece(board, x, y, 0);
 			if (!pieceMoves){
-				return -1; //not sure how to handle possible allocation error
+				return -1; 
 			}
 			if (LinkedList_length(pieceMoves) > 0){
 				PossibleMoveList_free(pieceMoves);
@@ -733,7 +742,7 @@ static struct LinkedList* getCastlingMoves(Board* board, int x, int y){
  *
  * @return: A list of all possible moves for a rook located at (fromX, fromY) on (board)       
  */
-static struct LinkedList* getRookMoves(Board* board, int fromX, int fromY){
+static struct LinkedList* getRookMoves(Board* board, int fromX, int fromY, int calledForQueen, int alreadyGotCastlingMoves){
 	struct LinkedList* possibleMoves = PossibleMoveList_new();
 	if (!possibleMoves){
 		return NULL;
@@ -760,12 +769,14 @@ static struct LinkedList* getRookMoves(Board* board, int fromX, int fromY){
 			}
 		}
 	}
-	struct LinkedList* castlingMoves = getCastlingMoves(board, fromX, fromY);
-	if (!castlingMoves){
-		PossibleMoveList_free(possibleMoves);
-		return NULL;
+	if (!calledForQueen && !alreadyGotCastlingMoves){
+		struct LinkedList* castlingMoves = getCastlingMoves(board, fromX, fromY);
+		if (!castlingMoves){
+			PossibleMoveList_free(possibleMoves);
+			return NULL;
+		}
+		LinkedList_concatenate(possibleMoves, castlingMoves);
 	}
-	LinkedList_concatenate(possibleMoves, castlingMoves);
 	return possibleMoves;
 }
 
@@ -774,14 +785,14 @@ static struct LinkedList* getRookMoves(Board* board, int fromX, int fromY){
  *
  * @return: A list of all possible moves for a queen located at (fromX, fromY) on (board)       
  */
-static struct LinkedList* getQueenMoves(Board* board, int fromX, int fromY){
+static struct LinkedList* getQueenMoves(Board* board, int fromX, int fromY, int alreadyGotCastlingMoves){
 	struct LinkedList* possibleMoves1;
 	struct LinkedList* possibleMoves2;
 	possibleMoves1 = getBishopMoves(board, fromX, fromY);
 	if (!possibleMoves1){
 		return NULL;
 	}
-	possibleMoves2 = getRookMoves  (board, fromX, fromY);
+	possibleMoves2 = getRookMoves  (board, fromX, fromY, 1, alreadyGotCastlingMoves);
 	if (!possibleMoves2){
 		PossibleMoveList_free(possibleMoves1);
 		return NULL;
@@ -825,7 +836,7 @@ static struct LinkedList* getKnightMoves(Board* board, int fromX, int fromY){
  *
  * @return: A list of all possible moves for a king located at (fromX, fromY) on (board)       
  */
-static struct LinkedList* getKingMoves(Board* board, int fromX, int fromY){
+static struct LinkedList* getKingMoves(Board* board, int fromX, int fromY, int alreadyGotCastlingMoves){
 	struct LinkedList* possibleMoves = PossibleMoveList_new();
 	if (!possibleMoves){
 		return NULL;
@@ -839,20 +850,21 @@ static struct LinkedList* getKingMoves(Board* board, int fromX, int fromY){
 		}
 	}
 	
-	struct LinkedList* castlingMoves1 = getCastlingMoves(board, 1, fromY);
-	if (!castlingMoves1){
-		PossibleMoveList_free(possibleMoves);
-		return NULL;
+	if (!alreadyGotCastlingMoves){
+		struct LinkedList* castlingMoves1 = getCastlingMoves(board, 1, fromY);
+		if (!castlingMoves1){
+			PossibleMoveList_free(possibleMoves);
+			return NULL;
+		}
+		LinkedList_concatenate(possibleMoves, castlingMoves1);
+		
+		struct LinkedList* castlingMoves2 = getCastlingMoves(board, 8, fromY);
+		if (!castlingMoves2){
+			PossibleMoveList_free(possibleMoves);
+			return NULL;
+		}
+		LinkedList_concatenate(possibleMoves, castlingMoves2);
 	}
-	LinkedList_concatenate(possibleMoves, castlingMoves1);
-	
-	struct LinkedList* castlingMoves2 = getCastlingMoves(board, 8, fromY);
-	if (!castlingMoves2){
-		PossibleMoveList_free(possibleMoves);
-		return NULL;
-	}
-	LinkedList_concatenate(possibleMoves, castlingMoves2);
-	
 	return possibleMoves;
 }
 
@@ -861,7 +873,7 @@ static struct LinkedList* getKingMoves(Board* board, int fromX, int fromY){
  *
  * @return: A list of all possible moves for a piece located at (fromX, fromY) on (board)       
  */
-struct LinkedList* Board_getPossibleMovesOfPiece(Board* board, int x, int y){
+struct LinkedList* Board_getPossibleMovesOfPiece(Board* board, int x, int y, int alreadyGotCastlingMoves){
 	char piece = Board_getPiece(board, x, y);
 	switch (piece){
 		case Board_BLACK_PAWN:
@@ -869,13 +881,13 @@ struct LinkedList* Board_getPossibleMovesOfPiece(Board* board, int x, int y){
 		case Board_BLACK_BISHOP:
 		case Board_WHITE_BISHOP: return getBishopMoves(board, x, y);
 		case Board_BLACK_ROOK:
-		case Board_WHITE_ROOK:   return getRookMoves  (board, x, y);
+		case Board_WHITE_ROOK:   return getRookMoves  (board, x, y, 0, alreadyGotCastlingMoves);
 		case Board_BLACK_QUEEN:
-		case Board_WHITE_QUEEN:  return getQueenMoves (board, x, y);
+		case Board_WHITE_QUEEN:  return getQueenMoves (board, x, y, alreadyGotCastlingMoves);
 		case Board_BLACK_KNIGHT:
 		case Board_WHITE_KNIGHT: return getKnightMoves(board, x, y);
 		case Board_BLACK_KING:
-		case Board_WHITE_KING: 	 return getKingMoves  (board, x, y);
+		case Board_WHITE_KING: 	 return getKingMoves  (board, x, y, alreadyGotCastlingMoves);
 	}
 	return PossibleMoveList_new();
 }
@@ -897,7 +909,10 @@ struct LinkedList* Board_getPossibleMoves(Board* board, int player){
 			if (Board_getColor(board, x, y) != player){
 				continue;
 			}
-			struct LinkedList* pieceMoves = Board_getPossibleMovesOfPiece(board, x, y);
+			if (pieceIsKing(board, x, y) || pieceIsRook(board, x, y)){
+				gotCastlingMoves = 1;
+			}
+			struct LinkedList* pieceMoves = Board_getPossibleMovesOfPiece(board, x, y, gotCastlingMoves);
 			if (!pieceMoves){
 				PossibleMoveList_free(possibleMoves);
 				return NULL;

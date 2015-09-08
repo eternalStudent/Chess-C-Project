@@ -143,15 +143,6 @@ int pieceIsPawn(int x, int y){
 }
 
 /*
- * @return: 1 if the piece located at (x,y) 
- * 			on the main playing board is a king, 0 otherwise 
- */
-int pieceIsKing(int x, int y){
-	char piece = Board_getPiece(&board, x, y);
-	return toBlack(piece) == Board_BLACK_KING; 
-}
-
-/*
  * Retrieves a color (black or white) from user input.
  */
 int stringToColor(char* str){
@@ -390,7 +381,7 @@ int printMovesOfPiece(char* command){
 		return -5;
 	}
 	
-	struct LinkedList* possibleMoves = Board_getPossibleMovesOfPiece(&board, x, y);
+	struct LinkedList* possibleMoves = Board_getPossibleMovesOfPiece(&board, x, y, 0);
 	if (!possibleMoves){
 		return 1;
 	}
@@ -471,7 +462,7 @@ int movePiece(char* command){
 		return exitcode;
 	}
 	
-	struct LinkedList* possibleMoves = Board_getPossibleMovesOfPiece(&board, move->fromX, move->fromY);
+	struct LinkedList* possibleMoves = Board_getPossibleMovesOfPiece(&board, move->fromX, move->fromY, 0);
 	if (!possibleMoves){
 		PossibleMove_free(move);
 		return 1;
@@ -514,7 +505,7 @@ int castleRook(char* command){
 		return 1;
 	}
 	
-	struct LinkedList* possibleMoves = Board_getPossibleMovesOfPiece(&board, rookX, rookY);
+	struct LinkedList* possibleMoves = Board_getPossibleMovesOfPiece(&board, rookX, rookY, 0);
 	if (!possibleMoves){
 		PossibleMove_free(castlingMove);
 		return 1;
@@ -647,6 +638,7 @@ int loadGame (char* command){
 	int updatedGameMode = 0;
 	char path[1024];
 	char buff[51];
+	
 	if (sscanf(command, "%4s %1023s", buff, path) != 2){
 		return -1;
 	}
@@ -655,6 +647,8 @@ int loadGame (char* command){
 	if (!gameFile){
 		return -9;
 	}
+	
+	PieceCounter_reset(counter);
 	
 	// resetting movement arrays, assuming files loaded without info about them correspond 
 	// to a game where all of the kings and rooks have never moved  
@@ -709,6 +703,7 @@ int loadGame (char* command){
 				char piece = buff[8+x];
 				if (piece != '_'){
 					Board_setPiece(&board, x, y, piece);
+					PieceCounter_update(counter, piece, 1, x, y);
 				}
 				else{
 					Board_setPiece(&board, x, y, Board_EMPTY);

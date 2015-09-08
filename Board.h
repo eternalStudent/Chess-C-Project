@@ -62,7 +62,7 @@ int  Board_getScore  (Board* board, int color);
 
 int Board_isInCheck(Board* board, int player);
 
-struct LinkedList* Board_getPossibleMovesOfPiece(Board* board, int x, int y);
+struct LinkedList* Board_getPossibleMovesOfPiece(Board* board, int x, int y, int alreadyGotCastlingMoves);
 
 struct LinkedList* Board_getPossibleMoves(Board* board, int player);
 
