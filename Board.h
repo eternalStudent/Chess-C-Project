@@ -56,6 +56,8 @@ void Board_update    (Board* board, struct PossibleMove* move);
 
 Board* Board_getPossibleBoard(Board* board, struct PossibleMove* move);
 
+int Board_possibleMovesExist (Board* board, int player);
+
 int  Board_evalPiece (Board* board, int x, int y, int color);
 
 int  Board_getScore  (Board* board, int color);

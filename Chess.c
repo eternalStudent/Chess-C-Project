@@ -609,7 +609,7 @@ int printMoveValue(char* command){
 			return exitcode;
 		}
 		else{
-			int score = alphabeta(move, depth, turn, INT_MIN, INT_MAX, 0);
+			int score = alphabeta(move, depth, turn, INT_MIN, INT_MAX);
 			printf("%d\n", score);
 			PossibleMove_free(move);			
 		}
@@ -847,7 +847,7 @@ int executeCommand(char* command){
 			return 0;
 		}
 		if (str_equals(str, "start")){
-			if(PieceCounter_kingIsMissing(counter) 
+			if(PieceCounter_kingIsMissing(counter)){
 				return -7;
 			}	
 			turn = first;
