@@ -54,15 +54,15 @@ void allocationFailed(){
 /*
  * The minimax AI algorithm.
  */
-int alphabeta(struct PossibleMove* possibleMove, int depth, int player, int alpha, int beta, int switcher){
+int alphabeta(struct PossibleMove* possibleMove, int depth, int player, int alpha, int beta){
 	int thisBoardScore = Board_getScore(possibleMove->board, player);
-	// maximum depth reached or game is over or allocation error occured in Board_getScore
+	// maximum depth reached or game is over or allocation error occurred in Board_getScore
 	if (depth == 1 || thisBoardScore == 10000 || thisBoardScore == -10000 || thisBoardScore == -10001){ 
 		return thisBoardScore;
 	}
 	
 	Board* board = possibleMove->board;
-	struct LinkedList* possibleMoves = (switcher == 1)? Board_getPossibleMoves(board, player) : Board_getPossibleMoves(board, !player);
+	struct LinkedList* possibleMoves = Board_getPossibleMoves(board, player);
 	if (!possibleMoves){
 		return -10001;
 	}
@@ -84,7 +84,7 @@ int alphabeta(struct PossibleMove* possibleMove, int depth, int player, int alph
 	Iterator_init(&iterator, possibleMoves);
 	while (Iterator_hasNext(&iterator)) {
 		struct PossibleMove* currentPossibleMove = (struct PossibleMove*)Iterator_next(&iterator);
-		int score = alphabeta(currentPossibleMove, depth-1, player, alpha, beta, !switcher);
+		int score = alphabeta(currentPossibleMove, depth-1, !player, alpha, beta);
 		if (score == -10001){ //allocation error occured
 			extremum = score;
 			break;
@@ -568,7 +568,7 @@ int printBestMoves(char* command){
 	}
 	while(Iterator_hasNext(&iterator)){
 		struct PossibleMove* currentMove = (struct PossibleMove*)Iterator_next(&iterator);
-		int score = alphabeta(currentMove, depth, turn, INT_MIN, INT_MAX, 0);
+		int score = alphabeta(currentMove, depth, turn, INT_MIN, INT_MAX);
 		if (score > bestScore) {
 			LinkedList_removeAll(bestMoves);
 			LinkedList_add(bestMoves, currentMove);
@@ -620,7 +620,7 @@ int printMoveValue(char* command){
 		exitcode = readTile(command + 19, &rookX, &rookY); 
 		if (exitcode == 0){
 			struct PossibleMove* castlingMove = PossibleMove_new(rookX, rookY, 0, 0, 0, &board);
-			int score = alphabeta(castlingMove, depth, turn, INT_MIN, INT_MAX, 0);
+			int score = alphabeta(castlingMove, depth, turn, INT_MIN, INT_MAX);
 			printf("%d\n", score);
 			PossibleMove_free(castlingMove);	
 		}
@@ -848,7 +848,6 @@ int executeCommand(char* command){
 		}
 		if (str_equals(str, "start")){
 			if(PieceCounter_kingIsMissing(counter) 
-				|| (Board_isInCheck(&board, player1) && Board_isInCheck(&board, player1))){
 				return -7;
 			}	
 			turn = first;
@@ -918,8 +917,11 @@ struct PossibleMove* minimax(){
 	}
 	while(Iterator_hasNext(&iterator)){
 		struct PossibleMove* currentMove = (struct PossibleMove*)Iterator_next(&iterator);
-		int score = (maxRecursionDepth == BEST)? alphabeta(currentMove, bestDepth, turn, INT_MIN, INT_MAX, 0) : alphabeta(currentMove, maxRecursionDepth, turn, INT_MIN, INT_MAX, 0);
-		if (score == -10001){ //allocation error occured in alphabeta
+		int score = (maxRecursionDepth == BEST)?
+				alphabeta(currentMove, bestDepth, turn, INT_MIN, INT_MAX): 
+				alphabeta(currentMove, maxRecursionDepth, turn, INT_MIN, INT_MAX);
+				
+		if (score == -10001){ //allocation error occurred in alphabeta
 			PossibleMoveList_free(allPossibleMoves);
 			return NULL;
 		}
@@ -978,19 +980,21 @@ void humanTurn(int player){
 }
 
 int isEndGame(){
-	struct LinkedList* allPossibleMoves = Board_getPossibleMoves(&board, turn);
-	if (!allPossibleMoves){
+	int canPlayerMove = Board_possibleMovesExist(&board, turn);
+	if (canPlayerMove == -1){
 		allocationFailed();
 	}
-	if (LinkedList_length(allPossibleMoves) == 0){
-		PossibleMoveList_free(allPossibleMoves);
-		return 1;
+	//losing scenario
+	if (Board_isInCheck(&board, turn)){	
+		if (!canPlayerMove){
+			return 1;
+		}
+		else{
+			printf("Check!");
+		}
 	}
-	if (Board_isInCheck(&board, turn)){
-		printf("Check!\n");
-	}
-	PossibleMoveList_free(allPossibleMoves);
-	return 0;
+	//tie scenario
+	return !canPlayerMove;
 }
 
 void printEndGameResults(){

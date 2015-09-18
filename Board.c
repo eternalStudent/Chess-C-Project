@@ -461,13 +461,13 @@ static int canBeCapturedByABishopRookOrQueen(Board* board, int player){
 				if (Board_getColor(board, x, y) == player){
 					break;
 				}
-				if (Board_isEmpty(board, x, y)){
-					continue;
-				}
 				if (toupper(Board_getPiece(board, x, y)) != Board_BLACK_QUEEN &&
 					toupper(Board_getPiece(board, x, y)) != Board_BLACK_ROOK &&
 					toupper(Board_getPiece(board, x, y)) != Board_BLACK_BISHOP){
 					break;
+				}
+				if (Board_isEmpty(board, x, y)){
+					continue;
 				}
 				if (toupper(Board_getPiece(board, x, y)) == Board_BLACK_QUEEN){
 					return 1;
