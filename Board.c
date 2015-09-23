@@ -319,34 +319,22 @@ int Board_evalPiece(Board* board, int x, int y, int player){
  *
  * @return: a numeric evaluation of the board
  */
-int Board_getScore(Board* board, int player){
-	int playerHasPossibleMoves = Board_possibleMovesExist(board, player);
-	if (playerHasPossibleMoves == -1){ //allocation error occured in Board_possibleMovesExist
+int Board_getScore(Board* board, int scoredForPlayer, int nextPlayer){
+	int nextPlayerCanMove = Board_possibleMovesExist(board, nextPlayer);
+	if (nextPlayerCanMove == -1){ //allocation error occured in Board_possibleMovesExist
 		return -10001;
 	}
-	int opponentHasPossibleMoves = Board_possibleMovesExist(board, !player);
-	if (opponentHasPossibleMoves == -1){
-		return -10001;
+	if (Board_isInCheck(board, nextPlayer) && !nextPlayerCanMove){
+		return scoredForPlayer == nextPlayer? -10000: 10000;
 	}
-	if (!playerHasPossibleMoves){
-		//losing configuration
-		if (Board_isInCheck(board, player)){
-			return -10000;
-		}
-		//tie
-		else{
-			return 0;
-		}
-	}
-	//winning configuration
-	if (Board_isInCheck(board, !player) && !opponentHasPossibleMoves){ 
-		return 10000;
+	if (!nextPlayerCanMove){
+		return 0;
 	}
 	//otherwise
 	int score = 0;
 	for (int x = 1; x <= Board_SIZE; x++){
 		for (int y = 1; y <= Board_SIZE; y++){
-			score += Board_evalPiece(board, x, y, player);
+			score += Board_evalPiece(board, x, y, scoredForPlayer);
 		}
 	}
 	return score;
@@ -461,13 +449,13 @@ static int canBeCapturedByABishopRookOrQueen(Board* board, int player){
 				if (Board_getColor(board, x, y) == player){
 					break;
 				}
+				if (Board_isEmpty(board, x, y)){
+					continue;
+				}
 				if (toupper(Board_getPiece(board, x, y)) != Board_BLACK_QUEEN &&
 					toupper(Board_getPiece(board, x, y)) != Board_BLACK_ROOK &&
 					toupper(Board_getPiece(board, x, y)) != Board_BLACK_BISHOP){
 					break;
-				}
-				if (Board_isEmpty(board, x, y)){
-					continue;
 				}
 				if (toupper(Board_getPiece(board, x, y)) == Board_BLACK_QUEEN){
 					return 1;

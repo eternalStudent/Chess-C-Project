@@ -1,9 +1,9 @@
 #ifndef ITERATOR_H
 #define ITERATOR_H
-struct Iterator{
+typedef struct Iterator{
 	struct ListNode* first;
 	struct ListNode* current;
-};
+} Iterator;
 
 void Iterator_init(struct Iterator* iterator, struct LinkedList* list);
 	

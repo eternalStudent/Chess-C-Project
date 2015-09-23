@@ -1,46 +1,34 @@
-#include "PossibleMove.h"
-#include "Board.h"
-#include "PossibleMoveList.h"
-#include "PieceCounter.h"
-#include "Iterator.h"
-#include "LinkedList.h"
-#include <stdlib.h>
-#include <stdio.h>
-#include <string.h>
-#include <ctype.h>
-#include <limits.h>
-
-#define SETTINGS 0
-#define GAME     1
-#define BEST     0
-#define SINGLE_PLAYER_MODE 2
-#define TWO_PLAYERS_MODE 1
-
-#define str_equals(x, y) strcmp(x, y) == 0
-#define toBlack(x) toupper(x)
-
-Board board;
-int maxRecursionDepth;
-int state;
-int gameMode;
-int player1;
-int turn;
-int first;
-int counter[2][7];
-
+#include "Chess.h" 
+#include "GUI.h"
 
 /*
  * Initializes the global variables.
  */
 void initialize(){
 	Board_init(&board);
-	maxRecursionDepth = 1;
-	state = SETTINGS;
+	if (displayMode == GUI){
+		GUI_init();
+		state = GAME;
+	}
+	else{
+		state = SETTINGS;
+	}
+	maxRecursionDepth = 1;	
 	player1 = WHITE;
 	turn = player1;
 	first = WHITE;
-	gameMode = 1;
+	gameMode = TWO_PLAYERS_MODE;
 	PieceCounter_setToMax(counter);
+	movesOfSelectedPiece = NULL;
+}
+
+void display(){
+	if (displayMode == GUI){
+		GUI_paint();		
+	}
+	else{
+		Board_print(&board);
+	}
 }
 
 /*
@@ -55,7 +43,7 @@ void allocationFailed(){
  * The minimax AI algorithm.
  */
 int alphabeta(struct PossibleMove* possibleMove, int depth, int player, int alpha, int beta){
-	int thisBoardScore = Board_getScore(possibleMove->board, player);
+	int thisBoardScore = Board_getScore(possibleMove->board, turn, player);
 	// maximum depth reached or game is over or allocation error occurred in Board_getScore
 	if (depth == 1 || thisBoardScore == 10000 || thisBoardScore == -10000 || thisBoardScore == -10001){ 
 		return thisBoardScore;
@@ -74,7 +62,7 @@ int alphabeta(struct PossibleMove* possibleMove, int depth, int player, int alph
 	//single child node
 	if (LinkedList_length(possibleMoves) == 1){
 		struct PossibleMove* onlyMove = PossibleMoveList_first(possibleMoves);
-		int score = Board_getScore(onlyMove->board, player);
+		int score = Board_getScore(onlyMove->board, turn, player);
 		LinkedList_free(possibleMoves);
 		return score;
 	}
@@ -475,7 +463,7 @@ int movePiece(char* command){
 	}
 	
 	Board_copy(&board, move->board);
-	Board_print(&board);
+	display();
 	PossibleMove_free(move);
 	PossibleMoveList_free(possibleMoves);
 	turn = !turn;
@@ -518,7 +506,7 @@ int castleRook(char* command){
 	}
 	
 	Board_copy(&board, castlingMove->board);
-	Board_print(&board);
+	display();
 	PossibleMove_free(castlingMove);
 	PossibleMoveList_free(possibleMoves);
 	turn = !turn;
@@ -568,7 +556,7 @@ int printBestMoves(char* command){
 	}
 	while(Iterator_hasNext(&iterator)){
 		struct PossibleMove* currentMove = (struct PossibleMove*)Iterator_next(&iterator);
-		int score = alphabeta(currentMove, depth, turn, INT_MIN, INT_MAX);
+		int score = alphabeta(currentMove, depth, !turn, INT_MIN, INT_MAX);
 		if (score > bestScore) {
 			LinkedList_removeAll(bestMoves);
 			LinkedList_add(bestMoves, currentMove);
@@ -609,7 +597,7 @@ int printMoveValue(char* command){
 			return exitcode;
 		}
 		else{
-			int score = alphabeta(move, depth, turn, INT_MIN, INT_MAX);
+			int score = alphabeta(move, depth+1, turn, INT_MIN, INT_MAX);
 			printf("%d\n", score);
 			PossibleMove_free(move);			
 		}
@@ -620,7 +608,7 @@ int printMoveValue(char* command){
 		exitcode = readTile(command + 19, &rookX, &rookY); 
 		if (exitcode == 0){
 			struct PossibleMove* castlingMove = PossibleMove_new(rookX, rookY, 0, 0, 0, &board);
-			int score = alphabeta(castlingMove, depth, turn, INT_MIN, INT_MAX);
+			int score = alphabeta(castlingMove, depth+1, turn, INT_MIN, INT_MAX);
 			printf("%d\n", score);
 			PossibleMove_free(castlingMove);	
 		}
@@ -726,7 +714,7 @@ int loadGame (char* command){
 		}
 	}
 	fclose(gameFile);
-	Board_print(&board);
+	display();
 	return 0;
 }
 
@@ -843,7 +831,7 @@ int executeCommand(char* command){
 			return setPiece(command);
 		}
 		if (str_equals(str, "print")){
-			Board_print(&board);
+			display();
 			return 0;
 		}
 		if (str_equals(str, "start")){
@@ -918,8 +906,8 @@ struct PossibleMove* minimax(){
 	while(Iterator_hasNext(&iterator)){
 		struct PossibleMove* currentMove = (struct PossibleMove*)Iterator_next(&iterator);
 		int score = (maxRecursionDepth == BEST)?
-				alphabeta(currentMove, bestDepth, turn, INT_MIN, INT_MAX): 
-				alphabeta(currentMove, maxRecursionDepth, turn, INT_MIN, INT_MAX);
+				alphabeta(currentMove, bestDepth, !turn, INT_MIN, INT_MAX): 
+				alphabeta(currentMove, maxRecursionDepth, !turn, INT_MIN, INT_MAX);
 				
 		if (score == -10001){ //allocation error occurred in alphabeta
 			PossibleMoveList_free(allPossibleMoves);
@@ -954,13 +942,10 @@ void computerTurn(){
 	Board_update(&board, bestMove);
 	PossibleMove_free(bestMove);
 	turn = !turn;
-	Board_print(&board);
+	display();
 }
 
-/*
- * The human turn procedure
- */
-void humanTurn(int player){
+void humanTurnConsole(int player){
 	while (turn == player){
 		if (state == SETTINGS){
 			printf("Enter game settings:\n");
@@ -979,6 +964,87 @@ void humanTurn(int player){
 	}
 }
 
+void humanTurnGUI(int player){
+	int x = 0;
+	int y = 0;
+	printf("%d\n", player);
+	
+	while (turn == player){
+		SDL_Event e;
+		while (SDL_PollEvent(&e) != 0) {
+			switch (e.type) {
+				case (SDL_QUIT):
+					exit(0);
+				case (SDL_KEYUP):
+					if (e.key.keysym.sym == SDLK_ESCAPE){
+						exit(0);
+					}
+				case (SDL_MOUSEBUTTONUP):
+					x = (e.button.x/TILE_SIZE)+1;
+					y = 8-(e.button.y/TILE_SIZE);
+					if (e.button.button == SDL_BUTTON_LEFT){
+						selectedX = x;
+						selectedY = y;
+						if (movesOfSelectedPiece){
+							LinkedList_free(movesOfSelectedPiece);
+							movesOfSelectedPiece = NULL;
+						}
+						movesOfSelectedPiece = Board_getPossibleMovesOfPiece(&board, selectedX, selectedY, 0);
+					}
+					else if (e.button.button == SDL_BUTTON_RIGHT){
+						if (!Board_getColor(&board, selectedX, selectedY) == turn){
+							continue;
+						}
+						
+						int legalMove = 1;
+						struct PossibleMove* move = PossibleMove_new(selectedX, selectedY, x, y, 0, &board);
+						while(1){					
+							if (PossibleMoveList_contains(movesOfSelectedPiece, move)){
+								break;
+							}
+							move = PossibleMove_new(selectedX, selectedY, 0, 0, 0, &board);
+							if (PossibleMoveList_contains(movesOfSelectedPiece, move)){
+								break;
+							}
+							move = PossibleMove_new(x, y, 0, 0, 0, &board);
+							if (PossibleMoveList_contains(movesOfSelectedPiece, move)){
+								break;
+							}
+							legalMove = 0;
+							break;
+						}
+						
+						if (legalMove){
+							Board_copy(&board, move->board);
+							PossibleMoveList_free(movesOfSelectedPiece);
+							movesOfSelectedPiece = NULL;
+							selectedX = 0;
+							turn = !turn;
+						}
+						PossibleMove_free(move);
+					}
+					break;
+				default:
+					break;
+			}
+		}
+		GUI_paint();
+		SDL_Delay(100);
+	}
+}
+
+/*
+ * The human turn procedure
+ */
+void humanTurn(int player){
+	if (displayMode == CONSOLE){
+		humanTurnConsole(player);
+	}
+	else{
+		humanTurnGUI(player); 
+	}
+}
+
 int isEndGame(){
 	int canPlayerMove = Board_possibleMovesExist(&board, turn);
 	if (canPlayerMove == -1){
@@ -990,7 +1056,7 @@ int isEndGame(){
 			return 1;
 		}
 		else{
-			printf("Check!");
+			printf("Check!\n");
 		}
 	}
 	//tie scenario
@@ -1006,10 +1072,17 @@ void printEndGameResults(){
 	}
 }
 
-int main(){
-	initialize();
-	Board_print(&board);
+int main(int argc, char* argv[]){
+	displayMode = CONSOLE;
+	if(argc>1){
+		if (str_equals(argv[1], "gui")){
+			displayMode = GUI;
+		}
+	}
 	
+	initialize();
+	display();
+
 	while (1){
 		if (isEndGame()){
 			break;

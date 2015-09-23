@@ -60,7 +60,7 @@ int Board_possibleMovesExist (Board* board, int player);
 
 int  Board_evalPiece (Board* board, int x, int y, int color);
 
-int  Board_getScore  (Board* board, int color);
+int Board_getScore(Board* board, int scoredForPlayer, int nextPlayer);
 
 int Board_isInCheck(Board* board, int player);
 

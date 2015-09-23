@@ -1,3 +1,15 @@
+#ifndef GUI_H
+#define GUI_H
+
+#include "SDL.h"
+#include "SDL_video.h"
+#include "LinkedList.h"
+#include "Board.h"
+#include "Iterator.h"
+#include "Chess.h"
+
+#define TILE_SIZE 64
+
 typedef struct Window{
 	SDL_Surface* surface;
 	struct LinkedList* children;
@@ -29,3 +41,8 @@ typedef struct Button{
 	SDL_Surface* current;
 } Button;
 
+int GUI_init();
+
+int GUI_paint();
+
+#endif

@@ -1,14 +1,17 @@
-CFLAGS = -std=c99 -g -Wall -pedantic-errors
-OFILES = Board.o PossibleMove.o PossibleMoveList.o PieceCounter.o Iterator.o LinkedList.o
+CFLAGS = -std=c99 -g -Wall -pedantic-errors `sdl-config --cflags`
+OFILES = Chess.o Board.o PossibleMove.o PossibleMoveList.o PieceCounter.o Iterator.o LinkedList.o GUI.o 
 
-all: Chess
+all: chessprog
 
 clean:
 	-rm chessprog $(OFILES)
 
-Chess: Chess.c $(OFILES)
-	gcc $(CFLAGS) -o chessprog $^ 
-
+chessprog: $(OFILES)
+	gcc -o chessprog $(CFLAGS) $(OFILES) `sdl-config --libs` 
+	
+Chess.o: Chess.c Chess.h GUI.h
+	gcc -c $(CFLAGS) Chess.c
+	
 Board.o: Board.c Board.h PossibleMove.h PossibleMoveList.h LinkedList.h
 	gcc -c $(CFLAGS) Board.c
 
@@ -26,3 +29,6 @@ Iterator.o: Iterator.c Iterator.h LinkedList.h
 	
 LinkedList.o: LinkedList.c LinkedList.h
 	gcc -c $(CFLAGS) LinkedList.c
+	
+GUI.o: GUI.c Board.h LinkedList.h Iterator.h
+	gcc -c $(CFLAGS) -lm GUI.c 
