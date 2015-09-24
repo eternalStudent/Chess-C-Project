@@ -13,9 +13,9 @@
  *          board - the board before the move
  * @return: NULL if any allocation errors occurred, the structure otherwise
  */
-struct PossibleMove* PossibleMove_new(int fromX, int fromY, int toX, int toY, char promoteTo, Board* board){
-	struct PossibleMove* move;
-	move = (struct PossibleMove*)calloc(1, sizeof(struct PossibleMove));
+PossibleMove* PossibleMove_new(int fromX, int fromY, int toX, int toY, char promoteTo, Board* board){
+	PossibleMove* move;
+	move = (PossibleMove*)calloc(1, sizeof(PossibleMove));
 	if (!move){
 		return NULL;
 	}
@@ -34,7 +34,7 @@ struct PossibleMove* PossibleMove_new(int fromX, int fromY, int toX, int toY, ch
  * @params: (other) - a pointer to the struct to be checked
  * @return: 1 (true) if both of the tiles represent the same move, 0 (false) otherwise
  */
-int PossibleMove_equals(struct PossibleMove* this, struct PossibleMove* other){
+int PossibleMove_equals(PossibleMove* this, PossibleMove* other){
 	return this->fromX == other->fromX && this->fromY == other->fromY
 			&& this->toX == other->toX && this->toY == other->toY
 			&& this->promotion == other->promotion;
@@ -43,7 +43,7 @@ int PossibleMove_equals(struct PossibleMove* this, struct PossibleMove* other){
 /* 
  * Prints the structure in the format: "move <fromX,fromY> to <toX,toY> promotion".
  */
-void PossibleMove_print(struct PossibleMove* move){
+void PossibleMove_print(PossibleMove* move){
 	if (move->toX != 0){
 		printf("<%c,%d> to <%c,%d>", move->fromX+96, move->fromY, move->toX+96, move->toY);
 		switch(move->promotion){
@@ -68,9 +68,9 @@ void PossibleMove_print(struct PossibleMove* move){
  *
  * @return: NULL if any allocation errors occurred, the cloned tile otherwise
  */
-struct PossibleMove* PossibleMove_clone (struct PossibleMove* move){
-	struct PossibleMove* clone;
-	clone = (struct PossibleMove*)calloc(1, sizeof(struct PossibleMove));
+PossibleMove* PossibleMove_clone (PossibleMove* move){
+	PossibleMove* clone;
+	clone = (PossibleMove*)calloc(1, sizeof(PossibleMove));
 	if (!clone){
 		return NULL;
 	}
@@ -94,7 +94,7 @@ struct PossibleMove* PossibleMove_clone (struct PossibleMove* move){
  * Frees the structure.
  */
 void PossibleMove_free(void* data){
-	struct PossibleMove* move = (struct PossibleMove*) data;
+	PossibleMove* move = (PossibleMove*) data;
 	Board_free(move->board);
 	free(move);
 }

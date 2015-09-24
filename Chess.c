@@ -42,7 +42,7 @@ void allocationFailed(){
 /*
  * The minimax AI algorithm.
  */
-int alphabeta(struct PossibleMove* possibleMove, int depth, int player, int alpha, int beta){
+int alphabeta(PossibleMove* possibleMove, int depth, int player, int alpha, int beta){
 	int thisBoardScore = Board_getScore(possibleMove->board, turn, player);
 	// maximum depth reached or game is over or allocation error occurred in Board_getScore
 	if (depth == 1 || thisBoardScore == 10000 || thisBoardScore == -10000 || thisBoardScore == -10001){ 
@@ -50,7 +50,7 @@ int alphabeta(struct PossibleMove* possibleMove, int depth, int player, int alph
 	}
 	
 	Board* board = possibleMove->board;
-	struct LinkedList* possibleMoves = Board_getPossibleMoves(board, player);
+	LinkedList* possibleMoves = Board_getPossibleMoves(board, player);
 	if (!possibleMoves){
 		return -10001;
 	}
@@ -61,17 +61,17 @@ int alphabeta(struct PossibleMove* possibleMove, int depth, int player, int alph
 	}
 	//single child node
 	if (LinkedList_length(possibleMoves) == 1){
-		struct PossibleMove* onlyMove = PossibleMoveList_first(possibleMoves);
+		PossibleMove* onlyMove = PossibleMoveList_first(possibleMoves);
 		int score = Board_getScore(onlyMove->board, turn, player);
 		LinkedList_free(possibleMoves);
 		return score;
 	}
 
 	int extremum = (player == player1)? INT_MIN : INT_MAX;
-	struct Iterator iterator;
+	Iterator iterator;
 	Iterator_init(&iterator, possibleMoves);
 	while (Iterator_hasNext(&iterator)) {
-		struct PossibleMove* currentPossibleMove = (struct PossibleMove*)Iterator_next(&iterator);
+		PossibleMove* currentPossibleMove = (PossibleMove*)Iterator_next(&iterator);
 		int score = alphabeta(currentPossibleMove, depth-1, !player, alpha, beta);
 		if (score == -10001){ //allocation error occured
 			extremum = score;
@@ -369,7 +369,7 @@ int printMovesOfPiece(char* command){
 		return -5;
 	}
 	
-	struct LinkedList* possibleMoves = Board_getPossibleMovesOfPiece(&board, x, y, 0);
+	LinkedList* possibleMoves = Board_getPossibleMovesOfPiece(&board, x, y, 0);
 	if (!possibleMoves){
 		return 1;
 	}
@@ -379,7 +379,7 @@ int printMovesOfPiece(char* command){
 	return 0;
 }
 
-struct PossibleMove* readMove(char* command, int* exitcode){
+PossibleMove* readMove(char* command, int* exitcode){
 	char fromTile[6];
 	char toTile[6];
 	char promoteToAsString[10];
@@ -424,7 +424,7 @@ struct PossibleMove* readMove(char* command, int* exitcode){
 		return NULL;
 	}
 	
-	struct PossibleMove* move = PossibleMove_new(fromX, fromY, toX, toY, promoteTo, &board);
+	PossibleMove* move = PossibleMove_new(fromX, fromY, toX, toY, promoteTo, &board);
 	if (!move){
 		*exitcode = 1;
 		return NULL;
@@ -444,13 +444,13 @@ struct PossibleMove* readMove(char* command, int* exitcode){
  */
 int movePiece(char* command){
 	int exitcode;
-	struct PossibleMove* move = readMove(command, &exitcode);
+	PossibleMove* move = readMove(command, &exitcode);
 	
 	if (exitcode != 0){
 		return exitcode;
 	}
 	
-	struct LinkedList* possibleMoves = Board_getPossibleMovesOfPiece(&board, move->fromX, move->fromY, 0);
+	LinkedList* possibleMoves = Board_getPossibleMovesOfPiece(&board, move->fromX, move->fromY, 0);
 	if (!possibleMoves){
 		PossibleMove_free(move);
 		return 1;
@@ -488,12 +488,12 @@ int castleRook(char* command){
 	if(!pieceIsRook(&board, rookX, rookY)){
 		return -11;
 	}
-	struct PossibleMove* castlingMove = PossibleMove_new(rookX, rookY, 0, 0, 0, &board);
+	PossibleMove* castlingMove = PossibleMove_new(rookX, rookY, 0, 0, 0, &board);
 	if (!castlingMove){
 		return 1;
 	}
 	
-	struct LinkedList* possibleMoves = Board_getPossibleMovesOfPiece(&board, rookX, rookY, 0);
+	LinkedList* possibleMoves = Board_getPossibleMovesOfPiece(&board, rookX, rookY, 0);
 	if (!possibleMoves){
 		PossibleMove_free(castlingMove);
 		return 1;
@@ -542,20 +542,20 @@ int printBestMoves(char* command){
 			return -1;
 		}
 	}
-	struct LinkedList* allPossibleMoves = Board_getPossibleMoves(&board, turn);
+	LinkedList* allPossibleMoves = Board_getPossibleMoves(&board, turn);
 	if (!allPossibleMoves){
 		return 1;
 	}
 	int bestScore = INT_MIN;
-	struct Iterator iterator;
+	Iterator iterator;
 	Iterator_init(&iterator, allPossibleMoves);
-	struct LinkedList* bestMoves = PossibleMoveList_new();
+	LinkedList* bestMoves = PossibleMoveList_new();
 	if (!bestMoves){
 		PossibleMoveList_free(allPossibleMoves);
 		return 1;
 	}
 	while(Iterator_hasNext(&iterator)){
-		struct PossibleMove* currentMove = (struct PossibleMove*)Iterator_next(&iterator);
+		PossibleMove* currentMove = (PossibleMove*)Iterator_next(&iterator);
 		int score = alphabeta(currentMove, depth, !turn, INT_MIN, INT_MAX);
 		if (score > bestScore) {
 			LinkedList_removeAll(bestMoves);
@@ -592,7 +592,7 @@ int printMoveValue(char* command){
 	}
 	
 	if (strstr(command, "move")){
-		struct PossibleMove* move = readMove(command + 12 + bestOffset, &exitcode);
+		PossibleMove* move = readMove(command + 12 + bestOffset, &exitcode);
 		if (exitcode != 0){ // illegal input or illegal move
 			return exitcode;
 		}
@@ -607,7 +607,7 @@ int printMoveValue(char* command){
 		int rookX, rookY;
 		exitcode = readTile(command + 19, &rookX, &rookY); 
 		if (exitcode == 0){
-			struct PossibleMove* castlingMove = PossibleMove_new(rookX, rookY, 0, 0, 0, &board);
+			PossibleMove* castlingMove = PossibleMove_new(rookX, rookY, 0, 0, 0, &board);
 			int score = alphabeta(castlingMove, depth+1, turn, INT_MIN, INT_MAX);
 			printf("%d\n", score);
 			PossibleMove_free(castlingMove);	
@@ -890,21 +890,21 @@ void printError(int error){
 	}
 }
 
-struct PossibleMove* minimax(){
-	struct LinkedList* allPossibleMoves = Board_getPossibleMoves(&board, turn);
+PossibleMove* minimax(){
+	LinkedList* allPossibleMoves = Board_getPossibleMoves(&board, turn);
 	if (!allPossibleMoves){
 		allocationFailed();
 	}
-	struct Iterator iterator;
+	Iterator iterator;
 	Iterator_init(&iterator, allPossibleMoves);
 	int bestScore = INT_MIN;
-	struct PossibleMove* bestMove = NULL;
+	PossibleMove* bestMove = NULL;
 	int bestDepth = 0;
 	if (maxRecursionDepth == BEST){
 		bestDepth = computeBestDepth(turn);
 	}
 	while(Iterator_hasNext(&iterator)){
-		struct PossibleMove* currentMove = (struct PossibleMove*)Iterator_next(&iterator);
+		PossibleMove* currentMove = (PossibleMove*)Iterator_next(&iterator);
 		int score = (maxRecursionDepth == BEST)?
 				alphabeta(currentMove, bestDepth, !turn, INT_MIN, INT_MAX): 
 				alphabeta(currentMove, maxRecursionDepth, !turn, INT_MIN, INT_MAX);
@@ -932,7 +932,7 @@ struct PossibleMove* minimax(){
  * The computer turn procedure.
  */
 void computerTurn(){
-	struct PossibleMove* bestMove = minimax();
+	PossibleMove* bestMove = minimax();
 	if (!bestMove){
 		allocationFailed();
 	}
@@ -997,7 +997,7 @@ void humanTurnGUI(int player){
 						}
 						
 						int legalMove = 1;
-						struct PossibleMove* move = PossibleMove_new(selectedX, selectedY, x, y, 0, &board);
+						PossibleMove* move = PossibleMove_new(selectedX, selectedY, x, y, 0, &board);
 						while(1){					
 							if (PossibleMoveList_contains(movesOfSelectedPiece, move)){
 								break;

@@ -7,7 +7,7 @@
  *
  * @params: (iterator) - a pointer to the iterator to be initialized
  */
-void Iterator_init(struct Iterator* iterator, struct LinkedList* list){
+void Iterator_init(Iterator* iterator, LinkedList* list){
 	iterator->first = list->first;
 	iterator->current = NULL;
 }
@@ -15,7 +15,7 @@ void Iterator_init(struct Iterator* iterator, struct LinkedList* list){
 /* 
  * @return: the next element in the structure over which the iterator is currently working
  */
-void* Iterator_next(struct Iterator* iterator){
+void* Iterator_next(Iterator* iterator){
 	if (iterator->current == NULL){
 		iterator->current = iterator->first;
 	}
@@ -28,7 +28,7 @@ void* Iterator_next(struct Iterator* iterator){
 /* 
  * @return: 0 (false) if the given iterator has reached the end of the list, 1 (true) otherwise
  */
-int Iterator_hasNext(struct Iterator* iterator){
+int Iterator_hasNext(Iterator* iterator){
 	if (iterator->current == NULL){
 		if (iterator->first == NULL){
 			return 0;

@@ -106,7 +106,7 @@ int BoardPanel_draw(void* data){
 			SDL_Rect piecePosition = {(x-1)*TILE_SIZE, (8-y)*TILE_SIZE, TILE_SIZE, TILE_SIZE};
 			int isBlackSquare = ((x+y) % 2 == 0);
 
-			SDL_FillRect(panel->surface, &piecePosition, isBlackSquare? 0xd18b47 : 0xffce9e); //possible error
+			SDL_FillRect(panel->surface, &piecePosition, isBlackSquare? BLACK_TILE_COLOR : WHITE_TILE_COLOR); //possible error
 			char piece = Board_getPiece(&board, x, y);
 			
 			switch (piece) {
@@ -141,7 +141,7 @@ int BoardPanel_draw(void* data){
 		Iterator_init(&iterator, movesOfSelectedPiece);	
 		SDL_Rect dest = {TILE_SIZE, 3*TILE_SIZE, TILE_SIZE, TILE_SIZE};
 		while (Iterator_hasNext(&iterator)){
-			struct PossibleMove* move = (struct PossibleMove*)Iterator_next(&iterator);
+			PossibleMove* move = (PossibleMove*)Iterator_next(&iterator);
 			SDL_Rect toRect = {((move->toX)-1)*TILE_SIZE, (8-move->toY)*TILE_SIZE, TILE_SIZE, TILE_SIZE};
 			//castle, rook is selected
 			if (move->toX == 0){

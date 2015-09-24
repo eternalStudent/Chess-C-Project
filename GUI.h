@@ -9,17 +9,19 @@
 #include "Chess.h"
 
 #define TILE_SIZE 64
+#define BLACK_TILE_COLOR 0xd18b47
+#define WHITE_TILE_COLOR 0xffce9e
 
 typedef struct Window{
 	SDL_Surface* surface;
-	struct LinkedList* children;
+	LinkedList* children;
 } Window;
 
 typedef struct Panel{
 	SDL_Rect rect;
 	SDL_Surface* surface;
 	int (*drawFunc)(void*);
-	struct LinkedList* children;
+	LinkedList* children;
 	SDL_Surface* parent;
 } Panel;
 

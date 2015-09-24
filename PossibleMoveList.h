@@ -2,15 +2,15 @@
 #define POSSIBLEMOVELIST_H
 
 #include "Board.h"
-struct LinkedList* PossibleMoveList_new();
+LinkedList* PossibleMoveList_new();
 
-struct PossibleMove* PossibleMoveList_first(struct LinkedList* list);
+struct PossibleMove* PossibleMoveList_first(LinkedList* list);
 
-int PossibleMoveList_add(struct LinkedList*, int, int, int, int, char, Board*);
+int PossibleMoveList_add(LinkedList*, int, int, int, int, char, Board*);
 
-void PossibleMoveList_print(struct LinkedList* list);
+void PossibleMoveList_print(LinkedList* list);
 
-int PossibleMoveList_contains(struct LinkedList* list, struct PossibleMove* move);
+int PossibleMoveList_contains(LinkedList* list, PossibleMove* move);
 
-void PossibleMoveList_free(struct LinkedList* list);
+void PossibleMoveList_free(LinkedList* list);
 #endif

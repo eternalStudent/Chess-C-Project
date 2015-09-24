@@ -35,6 +35,6 @@ int first;
 int counter[2][7];
 int selectedX;
 int selectedY;
-struct LinkedList* movesOfSelectedPiece;
+LinkedList* movesOfSelectedPiece;
 
 #endif

@@ -1,4 +1,5 @@
 #include "PossibleMove.h"
+#include "LinkedList.h"
 
 #ifndef BOARD_H
 #define BOARD_H
@@ -52,9 +53,9 @@ void Board_updateKingPosition (Board* board, int x, int y);
 
 int  Board_isInRange (int x, int y);
 
-void Board_update    (Board* board, struct PossibleMove* move);
+void Board_update    (Board* board, PossibleMove* move);
 
-Board* Board_getPossibleBoard(Board* board, struct PossibleMove* move);
+Board* Board_getPossibleBoard(Board* board, PossibleMove* move);
 
 int Board_possibleMovesExist (Board* board, int player);
 
@@ -64,9 +65,9 @@ int Board_getScore(Board* board, int scoredForPlayer, int nextPlayer);
 
 int Board_isInCheck(Board* board, int player);
 
-struct LinkedList* Board_getPossibleMovesOfPiece(Board* board, int x, int y, int alreadyGotCastlingMoves);
+LinkedList* Board_getPossibleMovesOfPiece(Board* board, int x, int y, int alreadyGotCastlingMoves);
 
-struct LinkedList* Board_getPossibleMoves(Board* board, int player);
+LinkedList* Board_getPossibleMoves(Board* board, int player);
 
 void Board_print     (Board* board);
 

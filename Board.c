@@ -201,7 +201,7 @@ void Board_updateKingPosition(Board* board, int x, int y){
  *
  * @params: (move) - the move to be carried out on the board 
  */
-void Board_update(Board* board, struct PossibleMove* move){
+void Board_update(Board* board, PossibleMove* move){
 	char piece = Board_getPiece(board, move->fromX, move->fromY);
 	int player = Board_getColor(board, move->fromX, move->fromY);	
 	if(move->toX != 0){ // non-castling move
@@ -248,7 +248,7 @@ void Board_update(Board* board, struct PossibleMove* move){
  * @params: (possibleMove) - a pointer to the move to be carried out.
  * @return: NULL if any allocation errors occurred, the new board otherwise
  */
-Board* Board_getPossibleBoard(Board* board, struct PossibleMove* possibleMove){
+Board* Board_getPossibleBoard(Board* board, PossibleMove* possibleMove){
 	Board* possibleBoard = Board_new();
 	if (!possibleBoard){
 		return NULL;
@@ -271,7 +271,7 @@ int Board_possibleMovesExist (Board* board, int player){
 			if (Board_getColor(board, x, y) != player){
 				continue;
 			}
-			struct LinkedList* pieceMoves = Board_getPossibleMovesOfPiece(board, x, y, 0);
+			LinkedList* pieceMoves = Board_getPossibleMovesOfPiece(board, x, y, 0);
 			if (!pieceMoves){
 				return -1; 
 			}
@@ -523,11 +523,11 @@ int Board_isFurthestRowForPlayer (int player, int y){
  *
  * @return: A list of all possible moves for the relevant pawn.
  */
-static struct LinkedList* getPawnMoves(Board* board, int fromX, int fromY){
+static LinkedList* getPawnMoves(Board* board, int fromX, int fromY){
 	int player = Board_getColor(board, fromX, fromY);
 	char* promotionOptions = (player == WHITE)? 
 			(char[4]){'q', 'b', 'n', 'r'}: (char[4]){'Q', 'B', 'N', 'R'};
-	struct LinkedList* possibleMoves = PossibleMoveList_new();
+	LinkedList* possibleMoves = PossibleMoveList_new();
 	
 	if (!possibleMoves){
 		return NULL;
@@ -551,7 +551,7 @@ static struct LinkedList* getPawnMoves(Board* board, int fromX, int fromY){
 		if (canMoveForward || canCapture){
 			if (Board_isFurthestRowForPlayer(player, toY)){	
 				for (int i = 0; i <= 3; i++){  //generate all possible promotions
-					struct PossibleMove* newMove1 = PossibleMove_new(fromX, fromY, toX, toY, promotionOptions[i], board);
+					PossibleMove* newMove1 = PossibleMove_new(fromX, fromY, toX, toY, promotionOptions[i], board);
 					if (!newMove1){
 						PossibleMoveList_free(possibleMoves);
 						return NULL;
@@ -565,7 +565,7 @@ static struct LinkedList* getPawnMoves(Board* board, int fromX, int fromY){
 				}
 			}	
 			else{
-				struct PossibleMove* newMove2 = PossibleMove_new(fromX, fromY, toX, toY, 0, board);
+				PossibleMove* newMove2 = PossibleMove_new(fromX, fromY, toX, toY, 0, board);
 				if (!newMove2){
 					PossibleMoveList_free(possibleMoves);
 					return NULL;
@@ -589,7 +589,7 @@ static struct LinkedList* getPawnMoves(Board* board, int fromX, int fromY){
  * @return: -1 if the given position is occupied or out of range, 
  *           0 otherwise
  */
-int addMoveIfLegal(struct LinkedList* possibleMoves, Board* board, 
+int addMoveIfLegal(LinkedList* possibleMoves, Board* board, 
 			int fromX, int fromY, int sideward, int forward){
 	int player = Board_getColor(board, fromX, fromY);
 	int toX = fromX + sideward;
@@ -605,7 +605,7 @@ int addMoveIfLegal(struct LinkedList* possibleMoves, Board* board,
 	if (Board_getPiece(board, toX, toY) == enemyKing){
 		return -1;
 	}
-	struct PossibleMove* move = PossibleMove_new(fromX, fromY, toX, toY, 0, board);
+	PossibleMove* move = PossibleMove_new(fromX, fromY, toX, toY, 0, board);
 	if (!move){
 		return -2;
 	}
@@ -627,8 +627,8 @@ int addMoveIfLegal(struct LinkedList* possibleMoves, Board* board,
  *
  * @return: A list of all possible moves for a bishop located at (fromX, fromY) on (board)       
  */
-static struct LinkedList* getBishopMoves(Board* board, int fromX, int fromY){
-	struct LinkedList* possibleMoves = PossibleMoveList_new();
+static LinkedList* getBishopMoves(Board* board, int fromX, int fromY){
+	LinkedList* possibleMoves = PossibleMoveList_new();
 	if (!possibleMoves){
 		return NULL;
 	}
@@ -667,7 +667,7 @@ int Board_clearAndSafeHorizontalPathExistsForKing(Board* board, int fromX, int t
 			exitcode = 0;
 			break;
 		}
-		struct PossibleMove* step = PossibleMove_new(fromX+(i-1)*adjustment, y, fromX+adjustment*i, y, 0, board);
+		PossibleMove* step = PossibleMove_new(fromX+(i-1)*adjustment, y, fromX+adjustment*i, y, 0, board);
 		if(!step){
 			return -1;
 		}
@@ -691,11 +691,11 @@ int Board_clearHorizontalPathExists(Board* board, int fromX, int toX, int y){
 	return 1;
 }
 
-static struct LinkedList* getCastlingMoves(Board* board, int x, int y){
+static LinkedList* getCastlingMoves(Board* board, int x, int y){
 	int player = Board_getColor(board, x, y);
 	int legalY = (player == WHITE)? 1 : 8;
 	
-	struct LinkedList* possibleMoves = PossibleMoveList_new();
+	LinkedList* possibleMoves = PossibleMoveList_new();
 	if (!possibleMoves){
 		return NULL;
 	}
@@ -716,7 +716,7 @@ static struct LinkedList* getCastlingMoves(Board* board, int x, int y){
 	if (Board_clearHorizontalPathExists(board, 5, x, y) 
 		&& clearPathExistsForKing 
 		&& board->hasRookEverMoved[player][positionInRookMovementArray] == 0){
-		struct PossibleMove* newCastlingMove = PossibleMove_new(x, y, 0, 0, 0, board);
+		PossibleMove* newCastlingMove = PossibleMove_new(x, y, 0, 0, 0, board);
 		if(!newCastlingMove){
 			return NULL;
 		}
@@ -730,8 +730,8 @@ static struct LinkedList* getCastlingMoves(Board* board, int x, int y){
  *
  * @return: A list of all possible moves for a rook located at (fromX, fromY) on (board)       
  */
-static struct LinkedList* getRookMoves(Board* board, int fromX, int fromY, int calledForQueen, int alreadyGotCastlingMoves){
-	struct LinkedList* possibleMoves = PossibleMoveList_new();
+static LinkedList* getRookMoves(Board* board, int fromX, int fromY, int calledForQueen, int alreadyGotCastlingMoves){
+	LinkedList* possibleMoves = PossibleMoveList_new();
 	if (!possibleMoves){
 		return NULL;
 	}
@@ -758,7 +758,7 @@ static struct LinkedList* getRookMoves(Board* board, int fromX, int fromY, int c
 		}
 	}
 	if (!calledForQueen && !alreadyGotCastlingMoves){
-		struct LinkedList* castlingMoves = getCastlingMoves(board, fromX, fromY);
+		LinkedList* castlingMoves = getCastlingMoves(board, fromX, fromY);
 		if (!castlingMoves){
 			PossibleMoveList_free(possibleMoves);
 			return NULL;
@@ -773,9 +773,9 @@ static struct LinkedList* getRookMoves(Board* board, int fromX, int fromY, int c
  *
  * @return: A list of all possible moves for a queen located at (fromX, fromY) on (board)       
  */
-static struct LinkedList* getQueenMoves(Board* board, int fromX, int fromY, int alreadyGotCastlingMoves){
-	struct LinkedList* possibleMoves1;
-	struct LinkedList* possibleMoves2;
+static LinkedList* getQueenMoves(Board* board, int fromX, int fromY, int alreadyGotCastlingMoves){
+	LinkedList* possibleMoves1;
+	LinkedList* possibleMoves2;
 	possibleMoves1 = getBishopMoves(board, fromX, fromY);
 	if (!possibleMoves1){
 		return NULL;
@@ -795,8 +795,8 @@ static struct LinkedList* getQueenMoves(Board* board, int fromX, int fromY, int 
  *
  * @return: A list of all possible moves for a knight located at (fromX, fromY) on (board)       
  */
-static struct LinkedList* getKnightMoves(Board* board, int fromX, int fromY){
-	struct LinkedList* possibleMoves = PossibleMoveList_new();
+static LinkedList* getKnightMoves(Board* board, int fromX, int fromY){
+	LinkedList* possibleMoves = PossibleMoveList_new();
 	if (!possibleMoves){
 		return NULL;
 	}
@@ -824,8 +824,8 @@ static struct LinkedList* getKnightMoves(Board* board, int fromX, int fromY){
  *
  * @return: A list of all possible moves for a king located at (fromX, fromY) on (board)       
  */
-static struct LinkedList* getKingMoves(Board* board, int fromX, int fromY, int alreadyGotCastlingMoves){
-	struct LinkedList* possibleMoves = PossibleMoveList_new();
+static LinkedList* getKingMoves(Board* board, int fromX, int fromY, int alreadyGotCastlingMoves){
+	LinkedList* possibleMoves = PossibleMoveList_new();
 	if (!possibleMoves){
 		return NULL;
 	}
@@ -839,14 +839,14 @@ static struct LinkedList* getKingMoves(Board* board, int fromX, int fromY, int a
 	}
 	
 	if (!alreadyGotCastlingMoves){
-		struct LinkedList* castlingMoves1 = getCastlingMoves(board, 1, fromY);
+		LinkedList* castlingMoves1 = getCastlingMoves(board, 1, fromY);
 		if (!castlingMoves1){
 			PossibleMoveList_free(possibleMoves);
 			return NULL;
 		}
 		LinkedList_concatenate(possibleMoves, castlingMoves1);
 		
-		struct LinkedList* castlingMoves2 = getCastlingMoves(board, 8, fromY);
+		LinkedList* castlingMoves2 = getCastlingMoves(board, 8, fromY);
 		if (!castlingMoves2){
 			PossibleMoveList_free(possibleMoves);
 			return NULL;
@@ -861,7 +861,7 @@ static struct LinkedList* getKingMoves(Board* board, int fromX, int fromY, int a
  *
  * @return: A list of all possible moves for a piece located at (fromX, fromY) on (board)       
  */
-struct LinkedList* Board_getPossibleMovesOfPiece(Board* board, int x, int y, int alreadyGotCastlingMoves){
+LinkedList* Board_getPossibleMovesOfPiece(Board* board, int x, int y, int alreadyGotCastlingMoves){
 	char piece = Board_getPiece(board, x, y);
 	switch (piece){
 		case Board_BLACK_PAWN:
@@ -886,9 +886,9 @@ struct LinkedList* Board_getPossibleMovesOfPiece(Board* board, int x, int y, int
  * @params: (player) - the player whose moves are to be put in the list
  * @return: a list of all moves currently possible for the player, or NULL if any allocation errors occurred 
  */
-struct LinkedList* Board_getPossibleMoves(Board* board, int player){
+LinkedList* Board_getPossibleMoves(Board* board, int player){
 	int gotCastlingMoves = 0;
-	struct LinkedList* possibleMoves = PossibleMoveList_new();
+	LinkedList* possibleMoves = PossibleMoveList_new();
 	if (!possibleMoves){
 		return NULL;
 	}
@@ -900,7 +900,7 @@ struct LinkedList* Board_getPossibleMoves(Board* board, int player){
 			if (pieceIsKing(board, x, y) || pieceIsRook(board, x, y)){
 				gotCastlingMoves = 1;
 			}
-			struct LinkedList* pieceMoves = Board_getPossibleMovesOfPiece(board, x, y, gotCastlingMoves);
+			LinkedList* pieceMoves = Board_getPossibleMovesOfPiece(board, x, y, gotCastlingMoves);
 			if (!pieceMoves){
 				PossibleMoveList_free(possibleMoves);
 				return NULL;

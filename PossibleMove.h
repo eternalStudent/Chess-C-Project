@@ -10,19 +10,19 @@ typedef struct Board{
 } Board;
 
 
-struct PossibleMove{
+typedef struct PossibleMove{
 	int fromX, fromY, toX, toY;
 	char promotion;
 	Board* board;
-};
+} PossibleMove;
 
-struct PossibleMove* PossibleMove_new(int, int, int, int, char, Board*);
+PossibleMove* PossibleMove_new(int, int, int, int, char, Board*);
 
-int PossibleMove_equals(struct PossibleMove* this, struct PossibleMove* other);
+int PossibleMove_equals(PossibleMove* this, PossibleMove* other);
 
-void PossibleMove_print(struct PossibleMove*);
+void PossibleMove_print(PossibleMove*);
 
-struct PossibleMove* PossibleMove_clone (struct PossibleMove* move);
+PossibleMove* PossibleMove_clone (PossibleMove* move);
 
 void PossibleMove_free(void*);
 
