@@ -15,6 +15,7 @@
 typedef struct Window{
 	SDL_Surface* surface;
 	LinkedList* children;
+	LinkedList* buttons;
 } Window;
 
 typedef struct Panel{
@@ -35,6 +36,7 @@ typedef struct Label{
 } Label;
 
 typedef struct Button{
+	int id;
 	SDL_Surface* parent;
 	SDL_Rect rect;
 	SDL_Surface* normal;
@@ -46,5 +48,7 @@ typedef struct Button{
 int GUI_init();
 
 int GUI_paint();
+
+int getButtonIdByMousePosition(int x, int y)
 
 #endif

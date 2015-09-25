@@ -171,11 +171,13 @@ int BoardPanel_draw(void* data){
 	return 0;
 }
 
-Button* Button_new(SDL_Surface* parent, SDL_Rect rect, const char* normal, const char* hovered, const char* pressed){
+Button* Button_new(int id, SDL_Surface* parent, SDL_Rect rect, 
+			const char* normal, const char* hovered, const char* pressed){
 	Button* button = (Button*)malloc(sizeof(Button));
 	if (!button){
 		return NULL;
 	}
+	button->id = id;
 	button->parent = parent;
 	button->rect = rect;
 	button->normal = SDL_LoadBMP(normal);
@@ -259,6 +261,22 @@ int GUI_paint(){
 	// We finished drawing
 	if (SDL_Flip(window->surface) != 0) {
 		printf("ERROR: failed to flip buffer: %s\n", SDL_GetError());
+	}
+	return 0;
+}
+
+int Rect_contains(SDL_Rect rect, int x, int y){
+	return x >= rect.x && x < rect.x+rect.w && y >= rect.y && y < rect.y+rect.h;
+}
+
+int getButtonIdByMousePosition(int x, int y){
+	Iterator iterator;
+	Iterator_init(&iterator, window->buttons);
+	while (Iterator_hasNext(&iterator)){
+		Button* button = (Button*)Iterator_next(&iterator);
+		if (Rect_contains(button->rect, x, y)){
+			return button->id;
+		}
 	}
 	return 0;
 }
