@@ -1002,10 +1002,12 @@ void humanTurnGUI(int player){
 							if (PossibleMoveList_contains(movesOfSelectedPiece, move)){
 								break;
 							}
+							PossibleMove_free(move);
 							move = PossibleMove_new(selectedX, selectedY, 0, 0, 0, &board);
 							if (PossibleMoveList_contains(movesOfSelectedPiece, move)){
 								break;
 							}
+							PossibleMove_free(move);
 							move = PossibleMove_new(x, y, 0, 0, 0, &board);
 							if (PossibleMoveList_contains(movesOfSelectedPiece, move)){
 								break;
