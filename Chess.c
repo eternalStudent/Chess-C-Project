@@ -8,11 +8,8 @@ void initialize(){
 	Board_init(&board);
 	if (displayMode == GUI){
 		GUI_init();
-		state = GAME;
 	}
-	else{
-		state = SETTINGS;
-	}
+	state = SETTINGS;
 	maxRecursionDepth = 1;	
 	player1 = WHITE;
 	turn = player1;
@@ -1052,6 +1049,13 @@ void humanTurnGUI(int player){
 					else if (e.button.button == SDL_BUTTON_RIGHT){
 						rightMouseButtonUp(e);
 					}
+					break;
+				case (SDL_MOUSEMOTION):
+					//setAllButtonsToNormal();
+					//Button* button = getButtonByMousePosition(e.button.x, e.button.y);
+					//if (button){
+					//	Button_setToHovered(button);
+					//}	
 					break;
 				default:
 					break;

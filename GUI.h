@@ -21,16 +21,15 @@ typedef struct Window{
 typedef struct Panel{
 	SDL_Rect rect;
 	SDL_Surface* surface;
-	int (*drawFunc)(void*);
+	int (*drawFunc)(struct Panel*);
 	LinkedList* children;
 	SDL_Surface* parent;
 } Panel;
 
 typedef struct Label{
-	SDL_Rect rect;
-	SDL_Rect sprite;
+	SDL_Rect pos;
+	SDL_Rect crop;
 	SDL_Surface* image;
-	int (*drawFunc)(void*);
 	SDL_Surface* parent;
 	Uint32 backgroundColor;
 } Label;
@@ -50,6 +49,14 @@ int GUI_init();
 
 int GUI_paint();
 
+void Button_setToNormal(Button* button);
+
+void Button_setToHovered(Button* button);
+
+void Button_setToPressed(Button* button);
+
 Button* getButtonByMousePosition(int x, int y);
+
+void setAllButtonsToNormal();
 
 #endif
