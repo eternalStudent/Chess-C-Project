@@ -962,7 +962,12 @@ void humanTurnConsole(int player){
 }
 
 void executeButton(int buttonId){
-	
+	switch(buttonId){
+		case NEW:
+			state = GAME;
+			setScreenToGame();
+			break;
+	}
 }
 
 void convertPixelsToBoardPosition(SDL_Event e, int* tileX, int* tileY){
@@ -1025,7 +1030,7 @@ void rightMouseButtonUp(SDL_Event e){
 
 void humanTurnGUI(int player){
 	printf("%d\n", player);
-	
+	Button* button;
 	while (turn == player){
 		SDL_Event e;
 		while (SDL_PollEvent(&e) != 0) {
@@ -1038,7 +1043,7 @@ void humanTurnGUI(int player){
 					}
 				case (SDL_MOUSEBUTTONUP):
 					if (e.button.button == SDL_BUTTON_LEFT){
-						Button* button = getButtonByMousePosition(e.button.x, e.button.y);
+						button = getButtonByMousePosition(e.button.x, e.button.y);
 						if (button){
 							executeButton(button->id);
 						}
@@ -1051,18 +1056,25 @@ void humanTurnGUI(int player){
 					}
 					break;
 				case (SDL_MOUSEMOTION):
-					//setAllButtonsToNormal();
-					//Button* button = getButtonByMousePosition(e.button.x, e.button.y);
-					//if (button){
-					//	Button_setToHovered(button);
-					//}	
+					setAllButtonsToNormal();
+					button = getButtonByMousePosition(e.button.x, e.button.y);
+					if (button){
+						Button_setToHovered(button);
+					}	
+					break;
+				case (SDL_MOUSEBUTTONDOWN):
+					setAllButtonsToNormal();
+					button = getButtonByMousePosition(e.button.x, e.button.y);
+					if (button){
+						Button_setToPressed(button);
+					}	
 					break;
 				default:
 					break;
 			}
 		}
 		GUI_paint();
-		SDL_Delay(100);
+		SDL_Delay(10);
 	}
 }
 

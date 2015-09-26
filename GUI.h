@@ -11,6 +11,10 @@
 #define TILE_SIZE 64
 #define BLACK_TILE_COLOR 0xd18b47
 #define WHITE_TILE_COLOR 0xffce9e
+#define BACKGROUND_BLUE  0x7f7fff
+#define NEW  0
+#define LOAD 1
+#define QUIT 2
 
 typedef struct Window{
 	SDL_Surface* surface;
@@ -31,7 +35,6 @@ typedef struct Label{
 	SDL_Rect crop;
 	SDL_Surface* image;
 	SDL_Surface* parent;
-	Uint32 backgroundColor;
 } Label;
 
 typedef struct Button{
@@ -58,5 +61,7 @@ void Button_setToPressed(Button* button);
 Button* getButtonByMousePosition(int x, int y);
 
 void setAllButtonsToNormal();
+
+int setScreenToGame();
 
 #endif

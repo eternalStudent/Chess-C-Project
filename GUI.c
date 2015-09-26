@@ -26,7 +26,6 @@ static SDL_Surface* loadImage(const char* path){
 }
 
 static int drawImage(SDL_Surface* img, SDL_Surface* surface, int x, int y){
-	printf("%d, %d\n", img->w, img->h);
 	SDL_Rect pos = {x, y, img->w, img->h};
 	if(SDL_BlitSurface(img, 0, surface, &pos)){
 		printf("1ERROR: failed to blit image: %s\n", SDL_GetError());
@@ -85,7 +84,6 @@ Label* Label_new(char* path, SDL_Surface* parent, SDL_Rect crop, SDL_Rect pos){
 		return NULL;
 	}
 	label->parent = parent;
-	label->backgroundColor = 0x7f7fff;
 	return label;
 }
 
@@ -186,7 +184,7 @@ static int MainMenu_draw(Panel* panel){
 	drawImageByPath("main.bmp", panel->surface, 0, 0);
 	
 	Iterator iterator;
-	Iterator_init(&iterator, window->children);
+	Iterator_init(&iterator, panel->children);
 	while(Iterator_hasNext(&iterator)){
 		if (Button_draw(Iterator_next(&iterator))){
 			return 1;
@@ -324,18 +322,18 @@ int setScreenToMainMenu(){
 	mainMenuPanel->children = LinkedList_new(&Button_free);
 	LinkedList_add(window->children, mainMenuPanel);
 	
-	SDL_Rect newGameRect = {166, 256, 436, 120};
+	SDL_Rect newGameRect = {166, 256, 436, 90};
 	Button* newGameButton = Button_new(0, mainMenuPanel->surface, newGameRect, 0, "main buttons.bmp");
 	LinkedList_add(mainMenuPanel->children, newGameButton);
 	LinkedList_add(window->buttons, newGameButton);
 	
-	SDL_Rect loadGameRect = {166, 376, 436, 120};
-	Button* loadGameButton = Button_new(1, mainMenuPanel->surface, loadGameRect, 120, "main buttons.bmp");
+	SDL_Rect loadGameRect = {166, 346, 436, 90};
+	Button* loadGameButton = Button_new(1, mainMenuPanel->surface, loadGameRect, 90, "main buttons.bmp");
 	LinkedList_add(mainMenuPanel->children, loadGameButton);
 	LinkedList_add(window->buttons, loadGameButton);
 	
-	SDL_Rect quitRect = {166, 496, 436, 120};
-	Button* quitButton = Button_new(2, mainMenuPanel->surface, quitRect, 240, "main buttons.bmp");
+	SDL_Rect quitRect = {166, 436, 436, 90};
+	Button* quitButton = Button_new(2, mainMenuPanel->surface, quitRect, 180, "main buttons.bmp");
 	LinkedList_add(mainMenuPanel->children, quitButton);
 	LinkedList_add(window->buttons, quitButton);
 	
@@ -359,6 +357,8 @@ static void Window_free(){
 	if (movesOfSelectedPiece){
 		LinkedList_free(movesOfSelectedPiece);
 	}
+	LinkedList_removeAll(window->buttons);
+	free(window->buttons);
 	SDL_Quit();
 }
 
@@ -377,7 +377,7 @@ int GUI_init(){
 	if(!window){
 		return 1;
 	}
-	//setScreenToGame();
+	setScreenToMainMenu();
 	return 0;
 }
 
