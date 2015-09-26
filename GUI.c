@@ -278,10 +278,38 @@ static int BoardPanel_draw(Panel* panel){
 	return 0;
 }
 
+static int auxPanel_draw(Panel* panel){	
+	if (SDL_FillRect(panel->surface, 0, BACKGROUND_GREEN) != 0) {
+		printf("ERROR: failed to draw rect: %s\n", SDL_GetError());
+		return 1;
+	}
+
+	if (drawImageByPath("board_letters.bmp", panel->surface, 2*TILE_SIZE, 10*TILE_SIZE) != 0){
+		return 1;
+	}
+	
+	if (drawImageByPath("board_numbers.bmp", panel->surface, TILE_SIZE, 2*TILE_SIZE) != 0){
+		return 1;
+	}
+	
+	if (drawImageByPath("check.bmp", panel->surface, 5*TILE_SIZE, 1.2*TILE_SIZE) != 0){
+		return 1;
+	}
+
+	if(BoardPanel_draw((Panel*)LinkedList_first(panel->children)) != 0){
+		return 1;
+	}
+	
+	if(Panel_flipAndDraw(panel) != 0){
+		return 1;
+	}
+	
+	return 0;
+}
+
 static void Panel_free(void* data){
 	Panel* panel = (Panel*)data;
 	SDL_FreeSurface(panel->surface);
-	SDL_FreeSurface(panel->parent);
 	if (panel->children){
 		LinkedList_free(panel->children);
 	}	
@@ -323,17 +351,17 @@ int setScreenToMainMenu(){
 	LinkedList_add(window->children, mainMenuPanel);
 	
 	SDL_Rect newGameRect = {166, 256, 436, 90};
-	Button* newGameButton = Button_new(0, mainMenuPanel->surface, newGameRect, 0, "main buttons.bmp");
+	Button* newGameButton = Button_new(NEW, mainMenuPanel->surface, newGameRect, 0, "main buttons.bmp");
 	LinkedList_add(mainMenuPanel->children, newGameButton);
 	LinkedList_add(window->buttons, newGameButton);
 	
 	SDL_Rect loadGameRect = {166, 346, 436, 90};
-	Button* loadGameButton = Button_new(1, mainMenuPanel->surface, loadGameRect, 90, "main buttons.bmp");
+	Button* loadGameButton = Button_new(LOAD, mainMenuPanel->surface, loadGameRect, 90, "main buttons.bmp");
 	LinkedList_add(mainMenuPanel->children, loadGameButton);
 	LinkedList_add(window->buttons, loadGameButton);
 	
 	SDL_Rect quitRect = {166, 436, 436, 90};
-	Button* quitButton = Button_new(2, mainMenuPanel->surface, quitRect, 180, "main buttons.bmp");
+	Button* quitButton = Button_new(QUIT, mainMenuPanel->surface, quitRect, 180, "main buttons.bmp");
 	LinkedList_add(mainMenuPanel->children, quitButton);
 	LinkedList_add(window->buttons, quitButton);
 	
@@ -341,24 +369,38 @@ int setScreenToMainMenu(){
 }
 
 int setScreenToGame(){
-	LinkedList_removeAll(window->children);
-	SDL_Rect boardRect = {0, 0, 512, 512};
-	Panel* boardPanel = Panel_new(window->surface, boardRect, &BoardPanel_draw);
+	LinkedList_free(window->children);
+	window->children = LinkedList_new(&Panel_free);
+	LinkedList_removeAll(window->buttons);
+	SDL_Rect boardRect = {2*TILE_SIZE, 2*TILE_SIZE, 512, 512};
+	SDL_Rect auxRect = {0, 0, 768, 768};
+	Panel* auxPanel = Panel_new(window->surface, auxRect, &auxPanel_draw);
+	if(!auxPanel){
+		return 1;
+	}
+	Panel* boardPanel = Panel_new(auxPanel->surface, boardRect, &BoardPanel_draw);
 	if(!boardPanel){
 		return 1;
 	}
-	LinkedList_add(window->children, boardPanel);
+	
+	auxPanel->children = LinkedList_new(&Panel_free);
+	if(!auxPanel->children){
+		return 1;
+	}
+	
+	LinkedList_add(auxPanel->children, boardPanel);
+	LinkedList_add(window->children, auxPanel);
 	return 0;
 }
 
 static void Window_free(){
 	LinkedList_free(window->children);
-	free(window);
 	if (movesOfSelectedPiece){
 		LinkedList_free(movesOfSelectedPiece);
 	}
 	LinkedList_removeAll(window->buttons);
 	free(window->buttons);
+	free(window);
 	SDL_Quit();
 }
 
@@ -383,7 +425,7 @@ int GUI_init(){
 
 int GUI_paint(){
 	// Clear window to BLACK
-	if (SDL_FillRect(window->surface, 0, 0) != 0) {
+	if (SDL_FillRect(window->surface, 0, BACKGROUND_GREEN) != 0) {
 		printf("ERROR: failed to draw rect: %s\n", SDL_GetError());
 		return 1;
 	}

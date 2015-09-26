@@ -971,8 +971,8 @@ void executeButton(int buttonId){
 }
 
 void convertPixelsToBoardPosition(SDL_Event e, int* tileX, int* tileY){
-	*tileX = (e.button.x/TILE_SIZE)+1;
-    *tileY = 8-(e.button.y/TILE_SIZE);
+	*tileX = ((e.button.x-2*TILE_SIZE)/TILE_SIZE)+1;
+    *tileY = 8-((e.button.y-2*TILE_SIZE)/TILE_SIZE);
 }   
 
 void leftMouseButtonUp(SDL_Event e){

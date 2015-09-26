@@ -11,7 +11,7 @@
 #define TILE_SIZE 64
 #define BLACK_TILE_COLOR 0xd18b47
 #define WHITE_TILE_COLOR 0xffce9e
-#define BACKGROUND_BLUE  0x7f7fff
+#define BACKGROUND_GREEN 0xabd383
 #define NEW  0
 #define LOAD 1
 #define QUIT 2
