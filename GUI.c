@@ -12,18 +12,29 @@ void Panel_free(void* data){
 	free(panel);
 }
 
+void Button_free(void* data){
+	Button* button = (Button*) data;
+	SDL_FreeSurface(button->img);
+	free(button);
+}
+
 Window* Window_new(int w, int h){
 	Window* window = (Window*)malloc(sizeof(Window));
 	if(!window){
 		return NULL;
 	}
 	window->surface = SDL_SetVideoMode(w, h, 0, SDL_HWSURFACE | SDL_DOUBLEBUF);
-	if (window->surface == NULL) {
+	if (!window->surface) {
 		printf("ERROR: failed to set video mode: %s\n", SDL_GetError());
 		return NULL;
 	}
 	window->children = LinkedList_new(&Panel_free);
 	if(!window->children){
+		return NULL;
+	}
+	window->buttons = LinkedList_new(&Button_free);
+	if(!window->buttons){
+		LinkedList_free(window->children);
 		return NULL;
 	}
 	return window;
@@ -92,6 +103,10 @@ Panel* Panel_new(SDL_Surface* parent, SDL_Rect rect, int(*drawFunc)(void*)){
 int BoardPanel_draw(void* data){
 	Panel* panel = (Panel*)data;
 	SDL_Surface* img = SDL_LoadBMP("pieces.bmp");
+	if (img == NULL){
+		printf("ERROR: failed to load BMP file: %s\n", SDL_GetError());
+		return 1;
+	}
 	
 	/* Set colorkey to BLUE*/
 	if (SDL_SetColorKey(img, SDL_SRCCOLORKEY, SDL_MapRGB(img->format, 127, 127, 255)) != 0) {
@@ -106,10 +121,14 @@ int BoardPanel_draw(void* data){
 			SDL_Rect piecePosition = {(x-1)*TILE_SIZE, (8-y)*TILE_SIZE, TILE_SIZE, TILE_SIZE};
 			int isBlackSquare = ((x+y) % 2 == 0);
 
-			SDL_FillRect(panel->surface, &piecePosition, isBlackSquare? BLACK_TILE_COLOR : WHITE_TILE_COLOR); //possible error
+			if (SDL_FillRect(panel->surface, &piecePosition, isBlackSquare? BLACK_TILE_COLOR : WHITE_TILE_COLOR) != 0){
+				printf("ERROR: failed to draw rect: %s\n", SDL_GetError());
+				return 1;
+			}
 			char piece = Board_getPiece(&board, x, y);
 			
 			switch (piece) {
+				case (Board_EMPTY): continue;
 				case (Board_WHITE_KING): break;
 				case (Board_BLACK_KING): rect.x = TILE_SIZE; break;
 				case (Board_WHITE_QUEEN): rect.x =  2*TILE_SIZE; break;
@@ -123,26 +142,29 @@ int BoardPanel_draw(void* data){
 				case (Board_WHITE_PAWN): rect.x = 2*TILE_SIZE; rect.y = TILE_SIZE; break;
 				case (Board_BLACK_PAWN): rect.x = 3*TILE_SIZE; rect.y = TILE_SIZE; break;
 			}
-			
-			if (piece == Board_EMPTY){
-				continue;
+
+			if(SDL_BlitSurface(img, &rect, panel->surface, &piecePosition) != 0){
+				printf("ERROR: failed to blit image: %s\n", SDL_GetError());
+				return 1;
 			}
-			SDL_BlitSurface(img, &rect, panel->surface, &piecePosition); //possible error
 		}
 	}
 	if (selectedX != 0){
 		SDL_Rect fromRect = {(selectedX-1)*TILE_SIZE, (8-selectedY)*TILE_SIZE, TILE_SIZE, TILE_SIZE};
 		SDL_Rect selected = {0, 3*TILE_SIZE, TILE_SIZE, TILE_SIZE};
-		SDL_BlitSurface(img, &selected, panel->surface, &fromRect); //possible error
+		if (SDL_BlitSurface(img, &selected, panel->surface, &fromRect) != 0){
+			printf("ERROR: failed to blit image: %s\n", SDL_GetError());
+			return 1;
+		}
 	}
 	
-	if (movesOfSelectedPiece){
+	if (movesOfSelectedPiece){		
 		Iterator iterator;
 		Iterator_init(&iterator, movesOfSelectedPiece);	
 		SDL_Rect dest = {TILE_SIZE, 3*TILE_SIZE, TILE_SIZE, TILE_SIZE};
 		while (Iterator_hasNext(&iterator)){
 			PossibleMove* move = (PossibleMove*)Iterator_next(&iterator);
-			SDL_Rect toRect = {((move->toX)-1)*TILE_SIZE, (8-move->toY)*TILE_SIZE, TILE_SIZE, TILE_SIZE};
+			SDL_Rect toRect = {((move->toX)-1)*TILE_SIZE, (8-move->toY)*TILE_SIZE, TILE_SIZE, TILE_SIZE};			
 			//castle, rook is selected
 			if (move->toX == 0){
 				int player = Board_getColor(&board, selectedX, selectedY);
@@ -155,12 +177,16 @@ int BoardPanel_draw(void* data){
 				toRect.y = (8-move->fromY)*TILE_SIZE;
 			}
 			
-			SDL_BlitSurface(img, &dest, panel->surface, &toRect); //possible error
+			if (SDL_BlitSurface(img, &dest, panel->surface, &toRect) != 0){
+				printf("ERROR: failed to blit image: %s\n", SDL_GetError());
+				return 1;
+			}
 		}
 	}
 	
 	if (SDL_Flip(panel->surface) != 0) {
 		printf("ERROR: failed to flip buffer: %s\n", SDL_GetError());
+		return 1;
 	}
 	if (SDL_BlitSurface(panel->surface, 0, panel->parent, &panel->rect) != 0) {
 		printf("ERROR: failed to blit image: %s\n", SDL_GetError());
@@ -171,33 +197,37 @@ int BoardPanel_draw(void* data){
 	return 0;
 }
 
-Button* Button_new(int id, SDL_Surface* parent, SDL_Rect rect, 
-			const char* normal, const char* hovered, const char* pressed){
+Button* Button_new(int id, SDL_Surface* parent, SDL_Rect rect, int y, int h, const char* imgName){
 	Button* button = (Button*)malloc(sizeof(Button));
 	if (!button){
 		return NULL;
 	}
+	
+	SDL_Surface* imgSet = SDL_LoadBMP(imgName);
+	
+	if (imgSet == NULL){
+		printf("ERROR: failed to load BMP file: %s\n", SDL_GetError());
+		return NULL;
+	}
+	
+	/* Set colorkey to BLUE*/
+	if (SDL_SetColorKey(imgSet, SDL_SRCCOLORKEY, SDL_MapRGB(imgSet->format, 127, 127, 255)) != 0) {
+		printf("ERROR: failed to set color key: %s\n", SDL_GetError());
+		return NULL;
+	}
+		
+	button->img = imgSet;
 	button->id = id;
 	button->parent = parent;
 	button->rect = rect;
-	button->normal = SDL_LoadBMP(normal);
-	if(!button->normal){
-		free(button);
-		return NULL;
-	}
-	button->hovered = SDL_LoadBMP(hovered);
-	if(!button->normal){
-		SDL_FreeSurface(button->normal);
-		free(button);
-		return NULL;
-	}
-	button->pressed = SDL_LoadBMP(pressed);
-	if(!button->normal){
-		SDL_FreeSurface(button->normal);
-		SDL_FreeSurface(button->hovered);
-		free(button);
-		return NULL;
-	}
+	
+	SDL_Rect leftThird = {0, y, (imgSet->w)/3, h};
+	SDL_Rect middleThird = {(imgSet->w)/3, y, (imgSet->w)/3, h};
+	SDL_Rect rightThird = {2*(imgSet->w)/3, y, (imgSet->w)/3, h};
+	
+	button->normal = rightThird;
+	button->hovered = middleThird;
+	button->pressed = leftThird;
 	button->current = button->normal;
 	
 	return button;
@@ -217,13 +247,13 @@ void Button_setToPressed(Button* button){
 
 int Button_draw(void* data){
 	Button* button = (Button*)data;
-	if (SDL_BlitSurface(button->current, 0, button->parent, &button->rect) != 0) {
+	if (SDL_BlitSurface(button->img, &button->current, button->parent, &button->rect) != 0) {
 		printf("ERROR: failed to blit image: %s\n", SDL_GetError());
 		return 1;
 	}
 	return 0;
 }
-
+	
 int GUI_init(){
 	/* Initialize SDL and make sure it quits*/
 	if (SDL_Init(SDL_INIT_VIDEO) < 0) {
@@ -233,21 +263,72 @@ int GUI_init(){
 	atexit(Window_free);
 	
 	//create tree
-	window = Window_new(768, 512);
+	window = Window_new(768, 768);
 	if(!window){
 		return 1;
 	}
 	SDL_Rect rect = {0, 0, 512, 512};
 	Panel* panel = Panel_new(window->surface, rect, &BoardPanel_draw);
+	if(!panel){
+		return 1;
+	}
 	LinkedList_add(window->children, panel);
 	
 	return 0;
 }
 
+// int PromotionDialog_draw(void* data){
+	// int error = 0;
+	// Panel* promotionDialog = (Panel*)data;
+
+	// promotionDialog->children = LinkedList_new(&Button_free);
+	// if(!promotionDialog->children){
+		// return 1;
+	// }
+	
+	// char* possiblePromotions = (turn == BLACK)? (char[4]){Board_BLACK_QUEEN, Board_BLACK_BISHOP, Board_BLACK_ROOK, Board_BLACK_KNIGHT}:
+											      // (char[4]){Board_WHITE_QUEEN, Board_WHITE_BISHOP, Board_WHITE_ROOK, Board_WHITE_KNIGHT};
+	// //creating the buttons
+	// for (int x = 1; x <= 2; x++){
+		// for (int y = 1; y <= 2; y++){
+			// int id = (x-1)*2 + y;
+			// int row;
+			// char piece = possiblePromotions[(x-1)*2 + (y-1)];
+			// SDL_Rect piecePosition = {(x-1)*TILE_SIZE, (2-y)*TILE_SIZE, TILE_SIZE, TILE_SIZE};
+			// switch (piece) {
+				// case (Board_WHITE_QUEEN):
+				// case (Board_BLACK_QUEEN): row = 0; break;
+				// case (Board_WHITE_ROOK): 
+				// case (Board_BLACK_ROOK): row = 128; break;
+				// case (Board_WHITE_KNIGHT):
+				// case (Board_BLACK_KNIGHT): row = 192; break;
+				// case (Board_WHITE_BISHOP):
+				// case (Board_BLACK_BISHOP): row = 64; break;
+			// }
+			
+			// Button* button = (turn == BLACK)? Button_new(id, promotionDialog, piecePosition, row, "blackPromotionButtons.bmp"):
+											  // Button_new(id, promotionDialog, piecePosition, row, "whitePromotionButtons.bmp");
+			// LinkedList_add(promotionDialog->children, button);
+		// }
+	// }
+
+	// //drawing the buttons
+	
+	// Iterator iterator;
+	// Iterator_init(&iterator, promotionDialog->children);
+	// while (Iterator_hasNext(&iterator)){
+		// Button* button = (Button*)Iterator_next(&iterator);
+		// error = Button_draw(button);
+	// }
+	
+	// return error;
+// }
+
 int GUI_paint(){
 	// Clear window to BLACK
 	if (SDL_FillRect(window->surface, 0, 0) != 0) {
 		printf("ERROR: failed to draw rect: %s\n", SDL_GetError());
+		return 1;
 	}
 	
 	//draw all panels
@@ -261,6 +342,7 @@ int GUI_paint(){
 	// We finished drawing
 	if (SDL_Flip(window->surface) != 0) {
 		printf("ERROR: failed to flip buffer: %s\n", SDL_GetError());
+		return 1;
 	}
 	return 0;
 }
@@ -269,14 +351,14 @@ int Rect_contains(SDL_Rect rect, int x, int y){
 	return x >= rect.x && x < rect.x+rect.w && y >= rect.y && y < rect.y+rect.h;
 }
 
-int getButtonIdByMousePosition(int x, int y){
+Button* getButtonByMousePosition(int x, int y){
 	Iterator iterator;
 	Iterator_init(&iterator, window->buttons);
 	while (Iterator_hasNext(&iterator)){
 		Button* button = (Button*)Iterator_next(&iterator);
 		if (Rect_contains(button->rect, x, y)){
-			return button->id;
+			return button;
 		}
 	}
-	return 0;
+	return NULL;
 }

@@ -37,4 +37,6 @@ int selectedX;
 int selectedY;
 LinkedList* movesOfSelectedPiece;
 
+int pieceIsPawn(int x, int y);
+
 #endif

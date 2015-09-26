@@ -25,6 +25,9 @@ PossibleMove* PossibleMove_new(int fromX, int fromY, int toX, int toY, char prom
 	move->toY = toY;
 	move->promotion = promoteTo;
 	move->board = Board_getPossibleBoard(board, move);
+	if (!move->board){
+		return NULL;
+	}
 	return move;
 }
 
@@ -36,8 +39,7 @@ PossibleMove* PossibleMove_new(int fromX, int fromY, int toX, int toY, char prom
  */
 int PossibleMove_equals(PossibleMove* this, PossibleMove* other){
 	return this->fromX == other->fromX && this->fromY == other->fromY
-			&& this->toX == other->toX && this->toY == other->toY
-			&& this->promotion == other->promotion;
+			&& this->toX == other->toX && this->toY == other->toY;
 }
 
 /* 

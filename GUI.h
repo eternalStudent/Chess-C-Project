@@ -38,17 +38,18 @@ typedef struct Label{
 typedef struct Button{
 	int id;
 	SDL_Surface* parent;
+	SDL_Surface* img;
 	SDL_Rect rect;
-	SDL_Surface* normal;
-	SDL_Surface* hovered;
-	SDL_Surface* pressed;
-	SDL_Surface* current;
+	SDL_Rect normal;
+	SDL_Rect hovered;
+	SDL_Rect pressed;
+	SDL_Rect current;
 } Button;
 
 int GUI_init();
 
 int GUI_paint();
 
-int getButtonIdByMousePosition(int x, int y)
+Button* getButtonByMousePosition(int x, int y);
 
 #endif

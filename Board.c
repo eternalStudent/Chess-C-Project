@@ -254,6 +254,10 @@ Board* Board_getPossibleBoard(Board* board, PossibleMove* possibleMove){
 		return NULL;
 	}
 	Board_copy(possibleBoard, board);
+	//prevents illegal moves in GUI mode from crashing the entire program
+	if (!pieceIsRook(board, possibleMove->fromX, possibleMove->fromY) && possibleMove->toX == 0 && possibleMove->toY == 0){ 
+		return possibleBoard;
+	}
 	Board_update(possibleBoard, possibleMove);
 	return possibleBoard;
 }

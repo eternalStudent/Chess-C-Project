@@ -964,9 +964,69 @@ void humanTurnConsole(int player){
 	}
 }
 
+void executeButton(int buttonId){
+	
+}
+
+void convertPixelsToBoardPosition(SDL_Event e, int* tileX, int* tileY){
+	*tileX = (e.button.x/TILE_SIZE)+1;
+    *tileY = 8-(e.button.y/TILE_SIZE);
+}   
+
+void leftMouseButtonUp(SDL_Event e){
+	convertPixelsToBoardPosition(e, &selectedX, &selectedY);
+	if (movesOfSelectedPiece){
+		LinkedList_free(movesOfSelectedPiece);
+		movesOfSelectedPiece = NULL;
+	}
+	movesOfSelectedPiece = Board_getPossibleMovesOfPiece(&board, selectedX, selectedY, 0);
+}
+
+void rightMouseButtonUp(SDL_Event e){
+	int x, y;
+	convertPixelsToBoardPosition(e, &x, &y);
+	if (!Board_getColor(&board, selectedX, selectedY) == turn){
+		return;
+	}
+	int legalMove = 0;
+	
+	char promoteTo = 0;
+	if(pieceIsPawn(selectedX, selectedY) && Board_isFurthestRowForPlayer(turn, y)){
+		promoteTo = (turn = WHITE)? 'q':'Q';        //default promotion
+	}
+	PossibleMove* move = PossibleMove_new(selectedX, selectedY, x, y, promoteTo, &board);
+	
+	while(1){					
+		if (PossibleMoveList_contains(movesOfSelectedPiece, move)){
+			legalMove = 1;
+			break;
+		}
+		PossibleMove_free(move);
+		move = PossibleMove_new(selectedX, selectedY, 0, 0, 0, &board);
+		if (PossibleMoveList_contains(movesOfSelectedPiece, move)){
+			legalMove = 1;
+			break;
+		}
+		PossibleMove_free(move);
+		move = PossibleMove_new(x, y, 0, 0, 0, &board);
+		if (PossibleMoveList_contains(movesOfSelectedPiece, move)){
+			legalMove = 1;
+			break;
+		}
+		break;
+	}
+	
+	if (legalMove){
+		Board_copy(&board, move->board);
+		PossibleMoveList_free(movesOfSelectedPiece);
+		movesOfSelectedPiece = NULL;
+		selectedX = 0;
+		turn = !turn;
+	}
+	PossibleMove_free(move);
+}
+
 void humanTurnGUI(int player){
-	int x = 0;
-	int y = 0;
 	printf("%d\n", player);
 	
 	while (turn == player){
@@ -980,50 +1040,17 @@ void humanTurnGUI(int player){
 						exit(0);
 					}
 				case (SDL_MOUSEBUTTONUP):
-					x = (e.button.x/TILE_SIZE)+1;
-					y = 8-(e.button.y/TILE_SIZE);
 					if (e.button.button == SDL_BUTTON_LEFT){
-						selectedX = x;
-						selectedY = y;
-						if (movesOfSelectedPiece){
-							LinkedList_free(movesOfSelectedPiece);
-							movesOfSelectedPiece = NULL;
+						Button* button = getButtonByMousePosition(e.button.x, e.button.y);
+						if (button){
+							executeButton(button->id);
 						}
-						movesOfSelectedPiece = Board_getPossibleMovesOfPiece(&board, selectedX, selectedY, 0);
+						else{
+							leftMouseButtonUp(e);
+						}
 					}
 					else if (e.button.button == SDL_BUTTON_RIGHT){
-						if (!Board_getColor(&board, selectedX, selectedY) == turn){
-							continue;
-						}
-						
-						int legalMove = 1;
-						PossibleMove* move = PossibleMove_new(selectedX, selectedY, x, y, 0, &board);
-						while(1){					
-							if (PossibleMoveList_contains(movesOfSelectedPiece, move)){
-								break;
-							}
-							PossibleMove_free(move);
-							move = PossibleMove_new(selectedX, selectedY, 0, 0, 0, &board);
-							if (PossibleMoveList_contains(movesOfSelectedPiece, move)){
-								break;
-							}
-							PossibleMove_free(move);
-							move = PossibleMove_new(x, y, 0, 0, 0, &board);
-							if (PossibleMoveList_contains(movesOfSelectedPiece, move)){
-								break;
-							}
-							legalMove = 0;
-							break;
-						}
-						
-						if (legalMove){
-							Board_copy(&board, move->board);
-							PossibleMoveList_free(movesOfSelectedPiece);
-							movesOfSelectedPiece = NULL;
-							selectedX = 0;
-							turn = !turn;
-						}
-						PossibleMove_free(move);
+						rightMouseButtonUp(e);
 					}
 					break;
 				default:
