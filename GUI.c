@@ -153,11 +153,12 @@ static void Button_free(void* data){
 
 //radio functions
 
-Radio* Radio_new(const char* path, SDL_Surface* parent, SDL_Rect crop, SDL_Rect pos){
+Radio* Radio_new(const char* path, SDL_Surface* parent, SDL_Rect crop, SDL_Rect pos, int value){
 	Radio* radio = (Radio*)malloc(sizeof(Radio));
 	if (!radio){
 		return NULL;
 	}
+	radio->value = value;
 	radio->state = 0;
 	radio->label = Label_new(path, parent, crop, pos);
 	if (!radio->label){
@@ -219,6 +220,13 @@ RadioGroup* RadioGroup_new(){
 void RadioGroup_add(RadioGroup* group, Radio* radio){
 	LinkedList_add(group->radios, radio);
 	radio->group = group;
+}
+
+int RadioGroup_getValue(RadioGroup* group){
+	if (!group->selected){
+		return 0;
+	}
+	return group->selected->value;
 }
 
 void RadioGroup_free(void* data){

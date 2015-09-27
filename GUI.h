@@ -50,6 +50,7 @@ typedef struct Button{
 
 typedef struct Radio{
 	int state;
+	int value;
 	Label* label;
 	struct RadioGroup* group;
 } Radio;
