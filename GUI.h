@@ -48,6 +48,17 @@ typedef struct Button{
 	SDL_Rect current;
 } Button;
 
+typedef struct Radio{
+	int state;
+	Label* label;
+	struct RadioGroup* group;
+} Radio;
+
+typedef struct RadioGroup{
+	LinkedList* radios;
+	Radio* selected;
+} RadioGroup;
+
 int GUI_init();
 
 int GUI_paint();

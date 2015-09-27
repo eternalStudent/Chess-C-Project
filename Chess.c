@@ -963,10 +963,8 @@ void humanTurnConsole(int player){
 
 void executeButton(int buttonId){
 	switch(buttonId){
-		case NEW:
-			state = GAME;
-			setScreenToGame();
-			break;
+		case NEW: setScreenToGame(); break;
+		case QUIT: exit(0); break;
 	}
 }
 

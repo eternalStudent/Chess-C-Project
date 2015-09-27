@@ -71,7 +71,7 @@ static SDL_Rect Rect_new(int x, int y, int w, int h){
 
 //Label function
 
-Label* Label_new(char* path, SDL_Surface* parent, SDL_Rect crop, SDL_Rect pos){
+Label* Label_new(const char* path, SDL_Surface* parent, SDL_Rect crop, SDL_Rect pos){
 	Label* label = (Label*)malloc(sizeof(Label));
 	if (!label){
 		return NULL;
@@ -149,6 +149,81 @@ static void Button_free(void* data){
 	Button* button = (Button*) data;
 	SDL_FreeSurface(button->img);
 	free(button);
+}
+
+//radio functions
+
+Radio* Radio_new(const char* path, SDL_Surface* parent, SDL_Rect crop, SDL_Rect pos){
+	Radio* radio = (Radio*)malloc(sizeof(Radio));
+	if (!radio){
+		return NULL;
+	}
+	radio->state = 0;
+	radio->label = Label_new(path, parent, crop, pos);
+	if (!radio->label){
+		free(radio);
+		return NULL;
+	}
+	radio->group = NULL;
+	return radio;
+}
+
+int Radio_draw(Radio* radio){
+	SDL_Surface* radioImg = loadImage("radio.bmp");
+	if (!radioImg){
+		return 1;
+	}
+	SDL_Rect radioImgPos = {radio->label->pos.x-24, radio->label->pos.y, 24, 24};
+	SDL_Rect radioImgCrop = {0, radio->state*24, 24, 24};
+	if (drawSubImage(radioImg, radioImgCrop, radio->label->parent, radioImgPos)){
+		SDL_FreeSurface(radioImg);
+		return 1;
+	}
+	SDL_FreeSurface(radioImg);
+	if (Label_draw(radio->label)){
+		return 1;
+	}
+	return 0;
+}
+
+void Radio_select(Radio* radio, int state){
+	Iterator iterator;
+	Iterator_init(&iterator, radio->group->radios);
+	while(Iterator_hasNext(&iterator)){
+		Radio* current = (Radio*)Iterator_next(&iterator);
+		current->state = 0;
+	}
+	radio->state = 1;
+	radio->group->selected = radio;
+}
+
+void Radio_free(void* data){
+	Radio* radio = (Radio*)data;
+	Label_free(radio->label);
+}
+
+RadioGroup* RadioGroup_new(){
+	RadioGroup* group = (RadioGroup*)malloc(sizeof(RadioGroup));
+	if (!group){
+		return NULL;
+	}
+	group->radios = LinkedList_new(&Radio_free);
+	if (!group->radios){
+		free(group);
+		return NULL;
+	}
+	group->selected = NULL;
+	return group;
+}
+
+void RadioGroup_add(RadioGroup* group, Radio* radio){
+	LinkedList_add(group->radios, radio);
+	radio->group = group;
+}
+
+void RadioGroup_free(void* data){
+	RadioGroup* group = (RadioGroup*)data;
+	LinkedList_free(group->radios);
 }
 
 //Panel functions
