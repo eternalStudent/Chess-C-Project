@@ -17,6 +17,8 @@ void initialize(){
 	gameMode = TWO_PLAYERS_MODE;
 	PieceCounter_setToMax(counter);
 	movesOfSelectedPiece = NULL;
+	isInCheck = 0;
+	gameEnded = 0;
 }
 
 void display(){
@@ -1027,7 +1029,6 @@ void rightMouseButtonUp(SDL_Event e){
 }
 
 void humanTurnGUI(int player){
-	printf("%d\n", player);
 	Button* button;
 	while (turn == player){
 		SDL_Event e;
@@ -1093,17 +1094,30 @@ int isEndGame(){
 	if (canPlayerMove == -1){
 		allocationFailed();
 	}
+	
 	//losing scenario
-	if (Board_isInCheck(&board, turn)){	
+	if (Board_isInCheck(&board, turn)){
+		isInCheck = 1;
 		if (!canPlayerMove){
+			gameEnded = 1;
 			return 1;
 		}
 		else{
-			printf("Check!\n");
+			if (displayMode == CONSOLE){
+				printf("Check!\n");
+			}
 		}
 	}
+	else{
+		isInCheck = 0;
+	}
+	
 	//tie scenario
-	return !canPlayerMove;
+	if(!canPlayerMove){
+		gameEnded = 1;
+		return 1;
+	}
+	return 0;
 }
 
 void printEndGameResults(){
@@ -1137,7 +1151,9 @@ int main(int argc, char* argv[]){
 			humanTurn(turn);
 		}	
 	}
-	
-	printEndGameResults();
+
+	if (displayMode == CONSOLE){
+		printEndGameResults();
+	}
 	return 0;
 }

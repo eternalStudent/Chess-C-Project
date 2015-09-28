@@ -36,6 +36,8 @@ int counter[2][7];
 int selectedX;
 int selectedY;
 LinkedList* movesOfSelectedPiece;
+int gameEnded;
+int isInCheck;
 
 int pieceIsPawn(int x, int y);
 

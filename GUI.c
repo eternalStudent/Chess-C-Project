@@ -56,6 +56,14 @@ static int drawSubImage(SDL_Surface* img, SDL_Rect crop, SDL_Surface* surface, S
 	return 0;
 }
 
+static int fillBackground(Panel* panel){
+	if (SDL_FillRect(panel->surface, 0, BACKGROUND_WHITE) != 0) {
+		printf("ERROR: failed to draw rect: %s\n", SDL_GetError());
+		return 1;
+	}
+	return 0;
+}
+
 static int flipBuffer(SDL_Surface* surface){
 	if (SDL_Flip(surface)) {
 		printf("ERROR: failed to flip buffer: %s\n", SDL_GetError());
@@ -361,25 +369,82 @@ static int BoardPanel_draw(Panel* panel){
 	return 0;
 }
 
-static int auxPanel_draw(Panel* panel){	
-	if (SDL_FillRect(panel->surface, 0, BACKGROUND_GREEN) != 0) {
-		printf("ERROR: failed to draw rect: %s\n", SDL_GetError());
+static int announcementsPanel_draw(Panel* panel){	
+	if (fillBackground(panel)){
 		return 1;
 	}
 
-	if (drawImageByPath("board_letters.bmp", panel->surface, 2*TILE_SIZE, 10*TILE_SIZE) != 0){
+	if (drawImageByPath("board_letters.bmp", panel->surface, 2*TILE_SIZE, 0) != 0){
+		return 1;
+	}
+		
+	if (isInCheck){
+		if (drawImageByPath("check.bmp", panel->surface, 5.2*TILE_SIZE, 0.5*TILE_SIZE) != 0){
+			return 1;
+		}
+	}
+	
+	if(gameEnded){
+		if(isInCheck){
+			SDL_Surface* mate = loadImage("mate.bmp");
+			if(!mate){
+				return 1;
+			}
+			
+			int mateImageRowToDrawByTurn = (turn == WHITE)? 25 : 0;
+			SDL_Rect crop = {0, mateImageRowToDrawByTurn, mate->w, 0.5*(mate->h)};
+			SDL_Rect pos = {3*TILE_SIZE, TILE_SIZE, mate->w, 0.5*(mate->h)};
+			
+			if (drawSubImage(mate, crop, panel->surface, pos) != 0){
+				SDL_FreeSurface(mate);
+				return 1;
+			}
+			
+			SDL_FreeSurface(mate);
+		}
+		
+		else{
+			if(drawImageByPath("tie.bmp", panel->surface, 3*TILE_SIZE, TILE_SIZE) != 0){
+				return 1;
+			}
+		}
+	}
+	
+	else{
+		SDL_Surface* makeYourMove = loadImage("makeYourMove.bmp");
+		if (!makeYourMove){
+			return 1;
+		}
+		
+		int moveImageRowToDrawByTurn = (turn == WHITE)? 0 : 30;
+		SDL_Rect crop = {0, moveImageRowToDrawByTurn, makeYourMove->w, 0.5*(makeYourMove->h)};
+		SDL_Rect pos = {3*TILE_SIZE, TILE_SIZE, makeYourMove->w, 0.5*(makeYourMove->h)};
+		
+		if (drawSubImage(makeYourMove, crop, panel->surface, pos) != 0){
+			SDL_FreeSurface(makeYourMove);
+			return 1;
+		}
+		
+		SDL_FreeSurface(makeYourMove);
+	}
+	
+	if(Panel_flipAndDraw(panel) != 0){
 		return 1;
 	}
 	
-	if (drawImageByPath("board_numbers.bmp", panel->surface, TILE_SIZE, 2*TILE_SIZE) != 0){
-		return 1;
-	}
-	
-	if (drawImageByPath("check.bmp", panel->surface, 5*TILE_SIZE, 1.2*TILE_SIZE) != 0){
-		return 1;
-	}
+	return 0;
+}
 
-	if(BoardPanel_draw((Panel*)LinkedList_first(panel->children)) != 0){
+int boardNumbersPanel_draw(Panel* panel){
+	if (fillBackground(panel)){
+		return 1;
+	}
+	
+	if (drawImageByPath("board_numbers.bmp", panel->surface, TILE_SIZE, 0) != 0){
+		return 1;
+	}
+	
+	if (drawImageByPath("board_numbers.bmp", panel->surface, 9.6*TILE_SIZE, 0) != 0){
 		return 1;
 	}
 	
@@ -455,24 +520,28 @@ int setScreenToGame(){
 	LinkedList_free(window->children);
 	window->children = LinkedList_new(&Panel_free);
 	LinkedList_removeAll(window->buttons);
-	SDL_Rect boardRect = {2*TILE_SIZE, 2*TILE_SIZE, 512, 512};
-	SDL_Rect auxRect = {0, 0, 768, 768};
-	Panel* auxPanel = Panel_new(window->surface, auxRect, &auxPanel_draw);
-	if(!auxPanel){
+	
+	SDL_Rect announcementsRect = {0, 10*TILE_SIZE, 12*TILE_SIZE, 2*TILE_SIZE};
+	Panel* announcementsPanel = Panel_new(window->surface, announcementsRect, &announcementsPanel_draw);
+	if(!announcementsPanel){
 		return 1;
 	}
-	Panel* boardPanel = Panel_new(auxPanel->surface, boardRect, &BoardPanel_draw);
+	
+	SDL_Rect boardRect = {2*TILE_SIZE, 2*TILE_SIZE, 8*TILE_SIZE, 8*TILE_SIZE};
+	Panel* boardPanel = Panel_new(window->surface, boardRect, &BoardPanel_draw);
 	if(!boardPanel){
 		return 1;
 	}
 	
-	auxPanel->children = LinkedList_new(&Panel_free);
-	if(!auxPanel->children){
+	SDL_Rect boardNumbersRect = {0, 2*TILE_SIZE, 12*TILE_SIZE, 8*TILE_SIZE};
+	Panel* boardNumbersPanel = Panel_new(window->surface, boardNumbersRect, &boardNumbersPanel_draw);
+	if (!boardNumbersPanel){
 		return 1;
 	}
 	
-	LinkedList_add(auxPanel->children, boardPanel);
-	LinkedList_add(window->children, auxPanel);
+	LinkedList_add(window->children, boardNumbersPanel);
+	LinkedList_add(window->children, boardPanel);
+	LinkedList_add(window->children, announcementsPanel);
 	return 0;
 }
 
@@ -508,7 +577,7 @@ int GUI_init(){
 
 int GUI_paint(){
 	// Clear window to BLACK
-	if (SDL_FillRect(window->surface, 0, BACKGROUND_GREEN) != 0) {
+	if (SDL_FillRect(window->surface, 0, BACKGROUND_WHITE) != 0) {
 		printf("ERROR: failed to draw rect: %s\n", SDL_GetError());
 		return 1;
 	}
