@@ -1030,6 +1030,7 @@ void rightMouseButtonUp(SDL_Event e){
 
 void humanTurnGUI(int player){
 	Button* button;
+	Radio* radio;
 	while (turn == player){
 		SDL_Event e;
 		while (SDL_PollEvent(&e) != 0) {
@@ -1043,8 +1044,12 @@ void humanTurnGUI(int player){
 				case (SDL_MOUSEBUTTONUP):
 					if (e.button.button == SDL_BUTTON_LEFT){
 						button = getButtonByMousePosition(e.button.x, e.button.y);
+						radio = getRadioByMousePosition(e.button.x, e.button.y);
 						if (button){
 							executeButton(button->id);
+						}
+						else if (radio){
+							Radio_select(radio, 1);
 						}
 						else{
 							leftMouseButtonUp(e);

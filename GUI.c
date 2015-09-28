@@ -167,6 +167,7 @@ Radio* Radio_new(const char* path, SDL_Surface* parent, SDL_Rect crop, SDL_Rect 
 		return NULL;
 	}
 	radio->value = value;
+	radio->pos = pos;
 	radio->state = 0;
 	radio->label = Label_new(path, parent, crop, pos);
 	if (!radio->label){
@@ -174,6 +175,7 @@ Radio* Radio_new(const char* path, SDL_Surface* parent, SDL_Rect crop, SDL_Rect 
 		return NULL;
 	}
 	radio->group = NULL;
+	LinkedList_add(window->radios, radio);
 	return radio;
 }
 
@@ -455,6 +457,55 @@ int boardNumbersPanel_draw(Panel* panel){
 	return 0;
 }
 
+int buttonsPanel_draw(Panel* panel){
+	if (fillBackground(panel)){
+		return 1;
+	}
+	
+	if (drawImageByPath("board_letters.bmp", panel->surface, 2*TILE_SIZE, 1.45*TILE_SIZE) != 0){
+		return 1;
+	}
+	
+	if(Panel_flipAndDraw(panel) != 0){
+		return 1;
+	}
+	
+	return 0;
+}
+
+int AISettingsPanel_draw(Panel* panel){
+	if (fillBackground(panel)){
+		return 1;
+	}
+	
+	if(drawImageByPath("AISettingsHeader.bmp", panel->surface, 3.75*TILE_SIZE, 0)){
+		return 1;
+	}
+	
+	if(drawImageByPath("difficultyHeader.bmp", panel->surface, 1.5*TILE_SIZE, 4.3*TILE_SIZE)){
+		return 1;
+	}
+	
+	if(drawImageByPath("AIColorHeader.bmp", panel->surface, 8*TILE_SIZE, 4.3*TILE_SIZE)){
+		return 1;
+	}
+	
+	Iterator iterator;
+	Iterator_init(&iterator, window->radios);
+	while(Iterator_hasNext(&iterator)){
+		Radio* radio = (Radio*)Iterator_next(&iterator);
+		if (Radio_draw(radio)){
+			return 1;
+		}
+	}
+	
+	if(Panel_flipAndDraw(panel) != 0){
+		return 1;
+	}
+	
+	return 0;
+}
+
 static void Panel_free(void* data){
 	Panel* panel = (Panel*)data;
 	SDL_FreeSurface(panel->surface);
@@ -485,11 +536,25 @@ static Window* Window_new(int w, int h){
 		LinkedList_free(window->children);
 		return NULL;
 	}
+	
+	window->radios = LinkedList_new(&Radio_free);
+	if(!window->radios){
+		LinkedList_free(window->children);
+		return NULL;
+	}
+	
 	return window;
+}
+void prepareWindowForNewScreen(){
+	LinkedList_free(window->children);
+	window->children = LinkedList_new(&Panel_free);
+	LinkedList_removeAll(window->buttons);
+	LinkedList_removeAll(window->radios);
 }
 
 int setScreenToMainMenu(){
-	LinkedList_removeAll(window->children);
+	prepareWindowForNewScreen();
+	
 	SDL_Rect rect = {0, 0, 768, 768};
 	Panel* mainMenuPanel = Panel_new(window->surface, rect, &MainMenu_draw);
 	if(!mainMenuPanel){
@@ -517,9 +582,7 @@ int setScreenToMainMenu(){
 }
 
 int setScreenToGame(){
-	LinkedList_free(window->children);
-	window->children = LinkedList_new(&Panel_free);
-	LinkedList_removeAll(window->buttons);
+	prepareWindowForNewScreen();
 	
 	SDL_Rect announcementsRect = {0, 10*TILE_SIZE, 12*TILE_SIZE, 2*TILE_SIZE};
 	Panel* announcementsPanel = Panel_new(window->surface, announcementsRect, &announcementsPanel_draw);
@@ -539,9 +602,72 @@ int setScreenToGame(){
 		return 1;
 	}
 	
+	SDL_Rect buttonsRect = {0, 0, 12*TILE_SIZE, 2*TILE_SIZE};
+	Panel* buttonsPanel = Panel_new(window->surface, buttonsRect, &buttonsPanel_draw);
+	if(!buttonsPanel){
+		return 1;
+	}
+	
 	LinkedList_add(window->children, boardNumbersPanel);
+	LinkedList_add(window->children, buttonsPanel);
 	LinkedList_add(window->children, boardPanel);
 	LinkedList_add(window->children, announcementsPanel);
+	return 0;
+}
+
+int setScreenToAISettings(){
+	prepareWindowForNewScreen();
+	
+	SDL_Rect AISettingsRect = {0, 0, 12*TILE_SIZE, 12*TILE_SIZE};
+	
+	Panel* AISettingsPanel = Panel_new(window->surface, AISettingsRect, &AISettingsPanel_draw);
+	if (!AISettingsPanel){
+		return 1;
+	}
+	
+	RadioGroup* difficultyRadioGroup = RadioGroup_new();
+	if (!difficultyRadioGroup){
+		return 1;
+	}
+	
+	for (int i = 0; i <= 4; i++){
+		SDL_Rect crop = {0, i*24, 48, 24};
+		SDL_Rect pos = {24+3*TILE_SIZE, i*24+5*TILE_SIZE, 48, 24};
+		Radio* difficultyRadio = Radio_new("difficultyLabels.bmp", AISettingsPanel->surface, crop, pos, i);
+		if (!difficultyRadio){
+			RadioGroup_free(difficultyRadioGroup);
+			return 1;
+		}
+		RadioGroup_add(difficultyRadioGroup, difficultyRadio);
+		if(Radio_draw(difficultyRadio)){
+			RadioGroup_free(difficultyRadioGroup);
+			return 1;
+		}
+	}
+	
+	RadioGroup* AIColorRadioGroup = RadioGroup_new();
+	if (!AIColorRadioGroup){
+		return 1;
+	}
+	
+	for (int i = 0; i <= 1; i++){
+		SDL_Rect crop = {0, i*24, 48, 24};
+		SDL_Rect pos = {24+8.5*TILE_SIZE, i*24+5*TILE_SIZE, 48, 24};
+		Radio* AIColorRadio = Radio_new("AIColorLabels.bmp", AISettingsPanel->surface, crop, pos, i);
+		if (!AIColorRadio){
+			RadioGroup_free(difficultyRadioGroup);
+			RadioGroup_free(AIColorRadioGroup);
+			return 1;
+		}
+		RadioGroup_add(AIColorRadioGroup, AIColorRadio);
+		if(Radio_draw(AIColorRadio)){
+			RadioGroup_free(difficultyRadioGroup);
+			RadioGroup_free(AIColorRadioGroup);
+			return 1;
+		}
+	}
+	
+	LinkedList_add(window->children, AISettingsPanel);
 	return 0;
 }
 
@@ -608,6 +734,18 @@ Button* getButtonByMousePosition(int x, int y){
 		Button* button = (Button*)Iterator_next(&iterator);
 		if (Rect_contains(button->rect, x, y)){
 			return button;
+		}
+	}
+	return NULL;
+}
+
+Radio* getRadioByMousePosition(int x, int y){
+	Iterator iterator;
+	Iterator_init(&iterator, window->radios);
+	while (Iterator_hasNext(&iterator)){
+		Radio* radio = (Radio*)Iterator_next(&iterator);
+		if (Rect_contains(radio->pos, x+24, y)){
+			return radio;
 		}
 	}
 	return NULL;

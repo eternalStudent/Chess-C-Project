@@ -20,6 +20,7 @@ typedef struct Window{
 	SDL_Surface* surface;
 	LinkedList* children;
 	LinkedList* buttons;
+	LinkedList* radios;
 } Window;
 
 typedef struct Panel{
@@ -52,6 +53,7 @@ typedef struct Radio{
 	int state;
 	int value;
 	Label* label;
+	SDL_Rect pos;
 	struct RadioGroup* group;
 } Radio;
 
@@ -71,6 +73,10 @@ void Button_setToHovered(Button* button);
 void Button_setToPressed(Button* button);
 
 Button* getButtonByMousePosition(int x, int y);
+
+Radio* getRadioByMousePosition(int x, int y);
+
+void Radio_select(Radio* radio, int state);
 
 void setAllButtonsToNormal();
 
