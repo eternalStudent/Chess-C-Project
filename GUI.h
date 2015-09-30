@@ -15,6 +15,20 @@
 #define NEW  0
 #define LOAD 1
 #define QUIT 2
+#define WHITE_KING 3
+#define BLACK_KING 4
+#define WHITE_QUEEN 5
+#define BLACK_QUEEN 6
+#define WHITE_KNIGHT 7
+#define BLACK_KNIGHT 8
+#define WHITE_PAWN 9
+#define BLACK_PAWN 10
+#define WHITE_ROOK 11
+#define BLACK_ROOK 12
+#define WHITE_BISHOP 13
+#define BLACK_BISHOP 14
+#define REMOVE_PIECE 15
+#define CLEAR 16
 
 typedef struct Window{
 	SDL_Surface* surface;
@@ -42,7 +56,8 @@ typedef struct Button{
 	int id;
 	SDL_Surface* parent;
 	SDL_Surface* img;
-	SDL_Rect rect;
+	SDL_Rect absoluteRect;
+	SDL_Rect relativeRect;
 	SDL_Rect normal;
 	SDL_Rect hovered;
 	SDL_Rect pressed;
@@ -60,6 +75,7 @@ typedef struct Radio{
 typedef struct RadioGroup{
 	LinkedList* radios;
 	Radio* selected;
+	int* parameter;
 } RadioGroup;
 
 int GUI_init();

@@ -38,6 +38,7 @@ int selectedY;
 LinkedList* movesOfSelectedPiece;
 int gameEnded;
 int isInCheck;
+char modifyingPiece;
 
 int pieceIsPawn(int x, int y);
 

@@ -19,6 +19,7 @@ void initialize(){
 	movesOfSelectedPiece = NULL;
 	isInCheck = 0;
 	gameEnded = 0;
+	modifyingPiece = '_';
 }
 
 void display(){
@@ -429,6 +430,22 @@ PossibleMove* readMove(char* command, int* exitcode){
 		return NULL;
 	}
 	return move;
+}
+
+//for debugging only
+void printBoardArrays(){
+	printf("kingMovementArray: ");
+	for (int i = 0; i <= 1; i++){
+		printf("%d", board.hasKingEverMoved[i]);
+	}
+	printf("\nRookMovementArray:");
+	
+	for (int i = 0; i <= 1; i++){
+		for (int j = 0; j <= 1; j++){
+			printf("%d", board.hasRookEverMoved[i][j]);
+		}
+	}
+	printf("\n");
 }
 
 /*
@@ -962,11 +979,24 @@ void humanTurnConsole(int player){
 		printError(error);
 	}
 }
-
 void executeButton(int buttonId){
 	switch(buttonId){
 		case NEW: setScreenToGame(); break;
 		case QUIT: exit(0); break;
+		case CLEAR: Board_clear(&board); PieceCounter_reset(counter); break;
+		case BLACK_KING: modifyingPiece = Board_BLACK_KING; break;
+		case BLACK_QUEEN: modifyingPiece = Board_BLACK_QUEEN; break;
+		case BLACK_ROOK: modifyingPiece = Board_BLACK_ROOK; break;
+		case BLACK_BISHOP: modifyingPiece = Board_BLACK_BISHOP; break;
+		case BLACK_KNIGHT: modifyingPiece = Board_BLACK_KNIGHT; break;
+		case BLACK_PAWN: modifyingPiece = Board_BLACK_PAWN; break;
+		case WHITE_KING: modifyingPiece = Board_WHITE_KING; break;
+		case WHITE_QUEEN: modifyingPiece = Board_WHITE_QUEEN; break;
+		case WHITE_ROOK: modifyingPiece = Board_WHITE_ROOK; break;
+		case WHITE_BISHOP: modifyingPiece = Board_WHITE_BISHOP; break;
+		case WHITE_KNIGHT: modifyingPiece = Board_WHITE_KNIGHT; break;
+		case WHITE_PAWN: modifyingPiece = Board_WHITE_PAWN; break;
+		case REMOVE_PIECE: modifyingPiece = Board_EMPTY; break;
 	}
 }
 
@@ -998,18 +1028,20 @@ void rightMouseButtonUp(SDL_Event e){
 	}
 	PossibleMove* move = PossibleMove_new(selectedX, selectedY, x, y, promoteTo, &board);
 	
-	while(1){					
+	while(1){
 		if (PossibleMoveList_contains(movesOfSelectedPiece, move)){
 			legalMove = 1;
 			break;
 		}
 		PossibleMove_free(move);
+		// castle move, rook eas selected
 		move = PossibleMove_new(selectedX, selectedY, 0, 0, 0, &board);
 		if (PossibleMoveList_contains(movesOfSelectedPiece, move)){
 			legalMove = 1;
 			break;
 		}
 		PossibleMove_free(move);
+		// castle move, king was selected
 		move = PossibleMove_new(x, y, 0, 0, 0, &board);
 		if (PossibleMoveList_contains(movesOfSelectedPiece, move)){
 			legalMove = 1;
@@ -1052,7 +1084,17 @@ void humanTurnGUI(int player){
 							Radio_select(radio, 1);
 						}
 						else{
-							leftMouseButtonUp(e);
+							if (modifyingPiece != '_'){
+								int modifiedTileX;
+								int modifiedTileY;
+								convertPixelsToBoardPosition(e, &modifiedTileX, &modifiedTileY);
+								Board_setPiece(&board, modifiedTileX, modifiedTileY, modifyingPiece);
+								modifyingPiece = '_';
+							}
+							else{
+								leftMouseButtonUp(e);
+							}
+							
 						}
 					}
 					else if (e.button.button == SDL_BUTTON_RIGHT){

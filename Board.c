@@ -85,7 +85,7 @@ void Board_clear(Board* board){
 		for (int y = 0; y < Board_SIZE; y++){
 			board->matrix[x][y] = Board_EMPTY;
 		}
-	}	
+	}
 }
 
 /*

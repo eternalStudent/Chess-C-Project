@@ -77,6 +77,15 @@ static SDL_Rect Rect_new(int x, int y, int w, int h){
 	return rect;
 }
 
+static SDL_Rect findAbsoluteRectPosition(SDL_Rect rect, Panel* parent){
+	int panelX = parent->rect.x;
+	int panelY = parent->rect.y;
+	int rectX = rect.x;
+	int rectY = rect.y;
+	
+	return Rect_new(panelX+rectX, panelY+rectY, rect.w, rect.h);
+}
+
 //Label function
 
 Label* Label_new(const char* path, SDL_Surface* parent, SDL_Rect crop, SDL_Rect pos){
@@ -111,7 +120,7 @@ void Label_free(void* data){
 
 //Button functions
 
-static Button* Button_new(int id, SDL_Surface* parent, SDL_Rect rect, int y, const char* path){
+static Button* Button_new(int id, Panel* parent, SDL_Rect rect, int y, const char* path){
 	Button* button = (Button*)malloc(sizeof(Button));
 	if (!button){
 		return NULL;
@@ -123,8 +132,10 @@ static Button* Button_new(int id, SDL_Surface* parent, SDL_Rect rect, int y, con
 		return NULL;
 	}
 	button->id = id;
-	button->parent = parent;
-	button->rect = rect;	
+	button->parent = parent->surface;
+	button->relativeRect = rect;
+	SDL_Rect absoluteRect = findAbsoluteRectPosition(rect, parent);
+	button->absoluteRect = absoluteRect;	
 	button->pressed = Rect_new(0, y, rect.w, rect.h);
 	button->hovered = Rect_new(rect.w, y, rect.w, rect.h);
 	button->normal = Rect_new(2*rect.w, y, rect.w, rect.h);
@@ -147,7 +158,7 @@ void Button_setToPressed(Button* button){
 
 static int Button_draw(void* data){
 	Button* button = (Button*)data;
-	if (drawSubImage(button->img, button->current, button->parent, button->rect)){
+	if (drawSubImage(button->img, button->current, button->parent, button->relativeRect)){
 		return 1;
 	}
 	return 0;
@@ -206,6 +217,8 @@ void Radio_select(Radio* radio, int state){
 	}
 	radio->state = 1;
 	radio->group->selected = radio;
+	int* adjustedParameter = radio->group->parameter;
+	*adjustedParameter = radio->value; 
 }
 
 void Radio_free(void* data){
@@ -213,7 +226,7 @@ void Radio_free(void* data){
 	Label_free(radio->label);
 }
 
-RadioGroup* RadioGroup_new(){
+RadioGroup* RadioGroup_new(int* parameter){
 	RadioGroup* group = (RadioGroup*)malloc(sizeof(RadioGroup));
 	if (!group){
 		return NULL;
@@ -224,6 +237,7 @@ RadioGroup* RadioGroup_new(){
 		return NULL;
 	}
 	group->selected = NULL;
+	group->parameter = parameter;
 	return group;
 }
 
@@ -290,13 +304,13 @@ static int MainMenu_draw(Panel* panel){
 	return 0;
 }
 
-static int BoardPanel_draw(Panel* panel){
+static int drawMainBoard(Panel* panel){
 	SDL_Surface* img = loadImage("pieces.bmp");
 	if (!img){
+		SDL_FreeSurface(img);
 		return 1;
 	}
-
-	/* paint pieces */
+	
 	for (int x = 1; x <= 8; x++){
 		for (int y = 1; y <= 8; y++){
 			SDL_Rect crop = {0, 0, TILE_SIZE, TILE_SIZE};
@@ -305,6 +319,7 @@ static int BoardPanel_draw(Panel* panel){
 			int isBlackSquare = ((x+y) % 2 == 0);
 			if (SDL_FillRect(panel->surface, &piecePosition, isBlackSquare? BLACK_TILE_COLOR : WHITE_TILE_COLOR) != 0){
 				printf("ERROR: failed to draw rect: %s\n", SDL_GetError());
+				SDL_FreeSurface(img);
 				return 1;
 			}
 			char piece = Board_getPiece(&board, x, y);
@@ -326,15 +341,86 @@ static int BoardPanel_draw(Panel* panel){
 			}
 
 			if (drawSubImage(img, crop, panel->surface, piecePosition)){
+				SDL_FreeSurface(img);
 				return 1;
 			}
 		}
 	}
+	if (Panel_flipAndDraw(panel)){
+		SDL_FreeSurface(img);
+		return 1;
+	}
+	
+	SDL_FreeSurface(img);
+	
+	return 0;
+}
+
+static int piecesPanel_draw(Panel* panel){
+	if (fillBackground(panel)){
+		return 1;
+	}
+	
+	Iterator iterator;
+	Iterator_init(&iterator, panel->children);
+	while(Iterator_hasNext(&iterator)){
+		if (Button_draw(Iterator_next(&iterator))){
+			return 1;
+		}
+	}
+	
+	if (Panel_flipAndDraw(panel)){
+		return 1;
+	}
+	
+	return 0;
+}
+
+static int settingsBoardPanel_draw(Panel* panel){
+	SDL_Surface* img = loadImage("pieces.bmp");
+	if (!img){
+		SDL_FreeSurface(img);
+		return 1;
+	}
+	
+	if(drawMainBoard(panel)){
+		SDL_FreeSurface(img);
+		return 1;
+	}
+	
+	if (drawImageByPath("boardSettingsHeader.bmp", window->surface, 4.2*TILE_SIZE, 0)){
+		return 1;
+	}
+	
+	if (Panel_flipAndDraw(panel)){
+		SDL_FreeSurface(img);
+		return 1;
+	}
+	
+	SDL_FreeSurface(img);
+	
+	return 0;
+	
+}
+
+static int gameBoardPanel_draw(Panel* panel){
+	SDL_Surface* img = loadImage("pieces.bmp");
+	if (!img){
+		SDL_FreeSurface(img);
+		return 1;
+	}
+	
+	if(drawMainBoard(panel)){
+		SDL_FreeSurface(img);
+		return 1;
+	}
+	
 	// paint moves
 	if (selectedX != 0){
 		SDL_Rect fromRect = {(selectedX-1)*TILE_SIZE, (8-selectedY)*TILE_SIZE, TILE_SIZE, TILE_SIZE};
 		SDL_Rect selected = {0, 3*TILE_SIZE, TILE_SIZE, TILE_SIZE};
 		if (drawSubImage(img, selected, panel->surface, fromRect)){
+			SDL_FreeSurface(img);
 			return 1;
 		}
 	}	
@@ -358,12 +444,14 @@ static int BoardPanel_draw(Panel* panel){
 			}
 			
 			if (drawSubImage(img, dest, panel->surface, toRect)){
+				SDL_FreeSurface(img);
 				return 1;
 			}
 		}
 	}
 	
 	if (Panel_flipAndDraw(panel)){
+		SDL_FreeSurface(img);
 		return 1;
 	}
 	SDL_FreeSurface(img);
@@ -506,6 +594,21 @@ int AISettingsPanel_draw(Panel* panel){
 	return 0;
 }
 
+int instructionsPanel_draw(Panel* panel){
+	if (fillBackground(panel)){
+		return 1;
+	}
+	if (drawImageByPath("instructions.bmp", panel->surface, 2.3*TILE_SIZE, 0) != 0){
+		return 1;
+	}
+	
+	if(Panel_flipAndDraw(panel) != 0){
+		return 1;
+	}
+	
+	return 0;
+}
+
 static void Panel_free(void* data){
 	Panel* panel = (Panel*)data;
 	SDL_FreeSurface(panel->surface);
@@ -561,20 +664,32 @@ int setScreenToMainMenu(){
 		return 1;
 	}
 	mainMenuPanel->children = LinkedList_new(&Button_free);
+	if(!mainMenuPanel->children){
+		return 1;
+	}
 	LinkedList_add(window->children, mainMenuPanel);
 	
 	SDL_Rect newGameRect = {166, 256, 436, 90};
-	Button* newGameButton = Button_new(NEW, mainMenuPanel->surface, newGameRect, 0, "main buttons.bmp");
+	Button* newGameButton = Button_new(NEW, mainMenuPanel, newGameRect, 0, "main buttons.bmp");
+	if (!newGameButton){
+		return 1;
+	}
 	LinkedList_add(mainMenuPanel->children, newGameButton);
 	LinkedList_add(window->buttons, newGameButton);
 	
 	SDL_Rect loadGameRect = {166, 346, 436, 90};
-	Button* loadGameButton = Button_new(LOAD, mainMenuPanel->surface, loadGameRect, 90, "main buttons.bmp");
+	Button* loadGameButton = Button_new(LOAD, mainMenuPanel, loadGameRect, 90, "main buttons.bmp");
+	if (!loadGameButton){
+		return 1;
+	}
 	LinkedList_add(mainMenuPanel->children, loadGameButton);
 	LinkedList_add(window->buttons, loadGameButton);
 	
 	SDL_Rect quitRect = {166, 436, 436, 90};
-	Button* quitButton = Button_new(QUIT, mainMenuPanel->surface, quitRect, 180, "main buttons.bmp");
+	Button* quitButton = Button_new(QUIT, mainMenuPanel, quitRect, 180, "main buttons.bmp");
+	if (!quitButton){
+		return 1;
+	}
 	LinkedList_add(mainMenuPanel->children, quitButton);
 	LinkedList_add(window->buttons, quitButton);
 	
@@ -591,7 +706,7 @@ int setScreenToGame(){
 	}
 	
 	SDL_Rect boardRect = {2*TILE_SIZE, 2*TILE_SIZE, 8*TILE_SIZE, 8*TILE_SIZE};
-	Panel* boardPanel = Panel_new(window->surface, boardRect, &BoardPanel_draw);
+	Panel* boardPanel = Panel_new(window->surface, boardRect, &gameBoardPanel_draw);
 	if(!boardPanel){
 		return 1;
 	}
@@ -619,13 +734,12 @@ int setScreenToAISettings(){
 	prepareWindowForNewScreen();
 	
 	SDL_Rect AISettingsRect = {0, 0, 12*TILE_SIZE, 12*TILE_SIZE};
-	
 	Panel* AISettingsPanel = Panel_new(window->surface, AISettingsRect, &AISettingsPanel_draw);
 	if (!AISettingsPanel){
 		return 1;
 	}
 	
-	RadioGroup* difficultyRadioGroup = RadioGroup_new();
+	RadioGroup* difficultyRadioGroup = RadioGroup_new(&maxRecursionDepth);
 	if (!difficultyRadioGroup){
 		return 1;
 	}
@@ -645,7 +759,7 @@ int setScreenToAISettings(){
 		}
 	}
 	
-	RadioGroup* AIColorRadioGroup = RadioGroup_new();
+	RadioGroup* AIColorRadioGroup = RadioGroup_new(&player1);
 	if (!AIColorRadioGroup){
 		return 1;
 	}
@@ -653,7 +767,7 @@ int setScreenToAISettings(){
 	for (int i = 0; i <= 1; i++){
 		SDL_Rect crop = {0, i*24, 48, 24};
 		SDL_Rect pos = {24+8.5*TILE_SIZE, i*24+5*TILE_SIZE, 48, 24};
-		Radio* AIColorRadio = Radio_new("AIColorLabels.bmp", AISettingsPanel->surface, crop, pos, i);
+		Radio* AIColorRadio = Radio_new("AIColorLabels.bmp", AISettingsPanel->surface, crop, pos, !i);
 		if (!AIColorRadio){
 			RadioGroup_free(difficultyRadioGroup);
 			RadioGroup_free(AIColorRadioGroup);
@@ -671,6 +785,55 @@ int setScreenToAISettings(){
 	return 0;
 }
 
+int setScreenToInstructions(){
+	prepareWindowForNewScreen();
+	SDL_Rect instructionsRect = {0, 0, 12*TILE_SIZE, 12*TILE_SIZE};
+	Panel* instructionsPanel = Panel_new(window->surface, instructionsRect, &instructionsPanel_draw);
+	if (!instructionsPanel){
+		return 1;
+	}
+	
+	LinkedList_add(window->children, instructionsPanel);
+	
+	return 0;
+}
+
+int setScreenToBoardSettings(){
+	prepareWindowForNewScreen();
+	SDL_Rect boardRect = {2*TILE_SIZE, 2*TILE_SIZE, 8*TILE_SIZE, 8*TILE_SIZE};
+		
+	Panel* boardPanel = Panel_new(window->surface, boardRect, &settingsBoardPanel_draw);
+	if(!boardPanel){
+		return 1;
+	}
+	
+	SDL_Rect piecesRect = {2.5*TILE_SIZE, 10*TILE_SIZE, 7*TILE_SIZE, 2*TILE_SIZE};
+	Panel* piecesPanel = Panel_new(window->surface, piecesRect, &piecesPanel_draw);
+	if(!piecesPanel){
+		return 1;
+	}
+	
+	piecesPanel->children = LinkedList_new(&Button_free);
+	if(!piecesPanel->children){
+		return 1;
+	}
+	
+	for (int i = 3; i <= 16; i++){
+		SDL_Rect buttonRect = {(((i-((i-3)%2))/2)-1)*TILE_SIZE, ((i-3)%2)*TILE_SIZE, TILE_SIZE, TILE_SIZE};
+		Button* button = Button_new(i, piecesPanel, buttonRect, (i-3)*TILE_SIZE, "piecesButtons.bmp");
+		if (!button){
+			return 1;
+		}
+		LinkedList_add(piecesPanel->children, button);
+		LinkedList_add(window->buttons, button);
+	}
+	
+	
+	LinkedList_add(window->children, boardPanel);
+	LinkedList_add(window->children, piecesPanel);
+	
+	return 0;
+}
 static void Window_free(){
 	LinkedList_free(window->children);
 	if (movesOfSelectedPiece){
@@ -678,6 +841,7 @@ static void Window_free(){
 	}
 	LinkedList_removeAll(window->buttons);
 	free(window->buttons);
+	free(window->radios);
 	free(window);
 	SDL_Quit();
 }
@@ -697,7 +861,7 @@ int GUI_init(){
 	if(!window){
 		return 1;
 	}
-	setScreenToMainMenu();
+	setScreenToBoardSettings();
 	return 0;
 }
 
@@ -732,7 +896,7 @@ Button* getButtonByMousePosition(int x, int y){
 	Iterator_init(&iterator, window->buttons);
 	while (Iterator_hasNext(&iterator)){
 		Button* button = (Button*)Iterator_next(&iterator);
-		if (Rect_contains(button->rect, x, y)){
+		if (Rect_contains(button->absoluteRect, x, y)){
 			return button;
 		}
 	}
