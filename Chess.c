@@ -19,6 +19,8 @@ void initialize(){
 	movesOfSelectedPiece = NULL;
 	isInCheck = 0;
 	gameEnded = 0;
+	settingInvalidPiece = 0;
+	kingIsMissing = 0;
 	modifyingPiece = '_';
 }
 
@@ -981,9 +983,10 @@ void humanTurnConsole(int player){
 }
 void executeButton(int buttonId){
 	switch(buttonId){
-		case NEW: setScreenToGame(); break;
+		case MAIN_MENU: setScreenToMainMenu(); break;
+		case NEW: setScreenToPlayerSettings(); break;
 		case QUIT: exit(0); break;
-		case CLEAR: Board_clear(&board); PieceCounter_reset(counter); break;
+		case CLEAR: Board_clear(&board); PieceCounter_reset(counter); settingInvalidPiece = 0; break;
 		case BLACK_KING: modifyingPiece = Board_BLACK_KING; break;
 		case BLACK_QUEEN: modifyingPiece = Board_BLACK_QUEEN; break;
 		case BLACK_ROOK: modifyingPiece = Board_BLACK_ROOK; break;
@@ -1085,10 +1088,32 @@ void humanTurnGUI(int player){
 						}
 						else{
 							if (modifyingPiece != '_'){
+								
 								int modifiedTileX;
 								int modifiedTileY;
 								convertPixelsToBoardPosition(e, &modifiedTileX, &modifiedTileY);
-								Board_setPiece(&board, modifiedTileX, modifiedTileY, modifyingPiece);
+								char modifiedPiece = Board_getPiece(&board, modifiedTileX, modifiedTileY);
+								
+								if (modifyingPiece != Board_EMPTY){ //trying to add a piece
+									if (PieceCounter_isAtMax(counter, modifyingPiece, modifiedTileX, modifiedTileY) || 
+										(pieceIsPawn(modifiedTileX, modifiedTileY) &&
+										Board_isFurthestRowForPlayer(Board_getColor(&board, modifiedTileX, modifiedTileY), modifiedTileY))){
+										settingInvalidPiece = 1;
+									}
+									
+									else{
+										settingInvalidPiece = 0;
+										Board_setPiece(&board, modifiedTileX, modifiedTileY, modifyingPiece);
+										PieceCounter_update(counter, modifyingPiece, 1, modifiedTileX, modifiedTileY);
+									}
+								}
+								
+								else{
+									settingInvalidPiece = 0;
+									Board_setPiece(&board, modifiedTileX, modifiedTileY, modifyingPiece);
+									PieceCounter_update(counter, modifiedPiece, -1, modifiedTileX, modifiedTileY);
+								}
+								
 								modifyingPiece = '_';
 							}
 							else{

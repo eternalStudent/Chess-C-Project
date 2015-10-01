@@ -191,7 +191,7 @@ Radio* Radio_new(const char* path, SDL_Surface* parent, SDL_Rect crop, SDL_Rect 
 }
 
 int Radio_draw(Radio* radio){
-	SDL_Surface* radioImg = loadImage("radio.bmp");
+	SDL_Surface* radioImg = loadImage("Textures/radio.bmp");
 	if (!radioImg){
 		return 1;
 	}
@@ -288,7 +288,7 @@ static int Panel_flipAndDraw(Panel* panel){
 }
 
 static int MainMenu_draw(Panel* panel){
-	drawImageByPath("main.bmp", panel->surface, 0, 0);
+	drawImageByPath("Textures/main.bmp", panel->surface, 0, 0);
 	
 	Iterator iterator;
 	Iterator_init(&iterator, panel->children);
@@ -305,7 +305,7 @@ static int MainMenu_draw(Panel* panel){
 }
 
 static int drawMainBoard(Panel* panel){
-	SDL_Surface* img = loadImage("pieces.bmp");
+	SDL_Surface* img = loadImage("Textures/pieces.bmp");
 	if (!img){
 		SDL_FreeSurface(img);
 		return 1;
@@ -377,34 +377,51 @@ static int piecesPanel_draw(Panel* panel){
 }
 
 static int settingsBoardPanel_draw(Panel* panel){
-	SDL_Surface* img = loadImage("pieces.bmp");
-	if (!img){
-		SDL_FreeSurface(img);
+	if (fillBackground(panel)){
 		return 1;
 	}
 	
 	if(drawMainBoard(panel)){
-		SDL_FreeSurface(img);
+		return 1;
+	}
+		
+	if (Panel_flipAndDraw(panel)){
 		return 1;
 	}
 	
-	if (drawImageByPath("boardSettingsHeader.bmp", window->surface, 4.2*TILE_SIZE, 0)){
+	return 0;
+	
+}
+
+static int boardSettingsHeaderPanel_draw(Panel* panel){
+	if (fillBackground(panel)){
 		return 1;
+	}
+	
+	if (drawImageByPath("Textures/boardSettingsHeader.bmp", panel->surface, 4.2*TILE_SIZE, 0)){
+		return 1;
+	}
+	
+	if (drawImageByPath("Textures/boardSettingsInstructions.bmp", panel->surface, 1.2*TILE_SIZE ,0.7*TILE_SIZE)){
+		return 1;
+	}
+	
+	if (settingInvalidPiece){
+		if (drawImageByPath("Textures/settingPieceError.bmp", panel->surface, 1.7*TILE_SIZE, 1.2*TILE_SIZE)){
+			return 1;
+		}
 	}
 	
 	if (Panel_flipAndDraw(panel)){
-		SDL_FreeSurface(img);
 		return 1;
 	}
-	
-	SDL_FreeSurface(img);
 	
 	return 0;
 	
 }
 
 static int gameBoardPanel_draw(Panel* panel){
-	SDL_Surface* img = loadImage("pieces.bmp");
+	SDL_Surface* img = loadImage("Textures/pieces.bmp");
 	if (!img){
 		SDL_FreeSurface(img);
 		return 1;
@@ -464,19 +481,19 @@ static int announcementsPanel_draw(Panel* panel){
 		return 1;
 	}
 
-	if (drawImageByPath("board_letters.bmp", panel->surface, 2*TILE_SIZE, 0) != 0){
+	if (drawImageByPath("Textures/board_letters.bmp", panel->surface, 2*TILE_SIZE, 0) != 0){
 		return 1;
 	}
 		
 	if (isInCheck){
-		if (drawImageByPath("check.bmp", panel->surface, 5.2*TILE_SIZE, 0.5*TILE_SIZE) != 0){
+		if (drawImageByPath("Textures/check.bmp", panel->surface, 5.2*TILE_SIZE, 0.5*TILE_SIZE) != 0){
 			return 1;
 		}
 	}
 	
 	if(gameEnded){
 		if(isInCheck){
-			SDL_Surface* mate = loadImage("mate.bmp");
+			SDL_Surface* mate = loadImage("Textures/mate.bmp");
 			if(!mate){
 				return 1;
 			}
@@ -494,14 +511,14 @@ static int announcementsPanel_draw(Panel* panel){
 		}
 		
 		else{
-			if(drawImageByPath("tie.bmp", panel->surface, 3*TILE_SIZE, TILE_SIZE) != 0){
+			if(drawImageByPath("Textures/tie.bmp", panel->surface, 3*TILE_SIZE, TILE_SIZE) != 0){
 				return 1;
 			}
 		}
 	}
 	
 	else{
-		SDL_Surface* makeYourMove = loadImage("makeYourMove.bmp");
+		SDL_Surface* makeYourMove = loadImage("Textures/makeYourMove.bmp");
 		if (!makeYourMove){
 			return 1;
 		}
@@ -530,11 +547,11 @@ int boardNumbersPanel_draw(Panel* panel){
 		return 1;
 	}
 	
-	if (drawImageByPath("board_numbers.bmp", panel->surface, TILE_SIZE, 0) != 0){
+	if (drawImageByPath("Textures/board_numbers.bmp", panel->surface, TILE_SIZE, 0) != 0){
 		return 1;
 	}
 	
-	if (drawImageByPath("board_numbers.bmp", panel->surface, 9.6*TILE_SIZE, 0) != 0){
+	if (drawImageByPath("Textures/board_numbers.bmp", panel->surface, 9.6*TILE_SIZE, 0) != 0){
 		return 1;
 	}
 	
@@ -550,8 +567,16 @@ int buttonsPanel_draw(Panel* panel){
 		return 1;
 	}
 	
-	if (drawImageByPath("board_letters.bmp", panel->surface, 2*TILE_SIZE, 1.45*TILE_SIZE) != 0){
+	if (drawImageByPath("Textures/board_letters.bmp", panel->surface, 2*TILE_SIZE, 1.45*TILE_SIZE) != 0){
 		return 1;
+	}
+	
+	Iterator iterator;
+	Iterator_init(&iterator, panel->children);
+	while(Iterator_hasNext(&iterator)){
+		if (Button_draw(Iterator_next(&iterator))){
+			return 1;
+		}
 	}
 	
 	if(Panel_flipAndDraw(panel) != 0){
@@ -566,15 +591,15 @@ int AISettingsPanel_draw(Panel* panel){
 		return 1;
 	}
 	
-	if(drawImageByPath("AISettingsHeader.bmp", panel->surface, 3.75*TILE_SIZE, 0)){
+	if(drawImageByPath("Textures/AISettingsHeader.bmp", panel->surface, 3.75*TILE_SIZE, 0)){
 		return 1;
 	}
 	
-	if(drawImageByPath("difficultyHeader.bmp", panel->surface, 1.5*TILE_SIZE, 4.3*TILE_SIZE)){
+	if(drawImageByPath("Textures/difficultyHeader.bmp", panel->surface, 1.5*TILE_SIZE, 4.3*TILE_SIZE)){
 		return 1;
 	}
 	
-	if(drawImageByPath("AIColorHeader.bmp", panel->surface, 8*TILE_SIZE, 4.3*TILE_SIZE)){
+	if(drawImageByPath("Textures/AIColorHeader.bmp", panel->surface, 8*TILE_SIZE, 4.3*TILE_SIZE)){
 		return 1;
 	}
 	
@@ -598,9 +623,51 @@ int instructionsPanel_draw(Panel* panel){
 	if (fillBackground(panel)){
 		return 1;
 	}
-	if (drawImageByPath("instructions.bmp", panel->surface, 2.3*TILE_SIZE, 0) != 0){
+	if (drawImageByPath("Textures/instructions.bmp", panel->surface, 2.3*TILE_SIZE, 0) != 0){
 		return 1;
 	}
+	
+	if(Panel_flipAndDraw(panel) != 0){
+		return 1;
+	}
+	
+	return 0;
+}
+
+int playerSettingsPanel_draw(Panel* panel){
+	if (fillBackground(panel)){
+		return 1;
+	}
+	
+	if(drawImageByPath("Textures/playerSettingsHeader.bmp", panel->surface, 3*TILE_SIZE ,0) != 0){
+		return 1;
+	}
+	
+	if(drawImageByPath("Textures/gameModeHeader.bmp", panel->surface, 1.8*TILE_SIZE, 4.3*TILE_SIZE )){
+		return 1;
+	}
+	
+	if(drawImageByPath("Textures/nextPlayerHeader.bmp", panel->surface, 7.8*TILE_SIZE, 4.3*TILE_SIZE)){
+		return 1;
+	}
+	
+	Iterator iterator;
+	Iterator_init(&iterator, window->radios);
+	while(Iterator_hasNext(&iterator)){
+		Radio* radio = (Radio*)Iterator_next(&iterator);
+		if (Radio_draw(radio)){
+			return 1;
+		}
+	}
+	
+	Iterator_init(&iterator, window->buttons);
+	while(Iterator_hasNext(&iterator)){
+		Button* button = (Button*)Iterator_next(&iterator);
+		if (Button_draw(button)){
+			return 1;
+		}
+	}
+	
 	
 	if(Panel_flipAndDraw(panel) != 0){
 		return 1;
@@ -670,7 +737,7 @@ int setScreenToMainMenu(){
 	LinkedList_add(window->children, mainMenuPanel);
 	
 	SDL_Rect newGameRect = {166, 256, 436, 90};
-	Button* newGameButton = Button_new(NEW, mainMenuPanel, newGameRect, 0, "main buttons.bmp");
+	Button* newGameButton = Button_new(NEW, mainMenuPanel, newGameRect, 0, "Textures/main buttons.bmp");
 	if (!newGameButton){
 		return 1;
 	}
@@ -678,7 +745,7 @@ int setScreenToMainMenu(){
 	LinkedList_add(window->buttons, newGameButton);
 	
 	SDL_Rect loadGameRect = {166, 346, 436, 90};
-	Button* loadGameButton = Button_new(LOAD, mainMenuPanel, loadGameRect, 90, "main buttons.bmp");
+	Button* loadGameButton = Button_new(LOAD, mainMenuPanel, loadGameRect, 90, "Textures/main buttons.bmp");
 	if (!loadGameButton){
 		return 1;
 	}
@@ -686,7 +753,7 @@ int setScreenToMainMenu(){
 	LinkedList_add(window->buttons, loadGameButton);
 	
 	SDL_Rect quitRect = {166, 436, 436, 90};
-	Button* quitButton = Button_new(QUIT, mainMenuPanel, quitRect, 180, "main buttons.bmp");
+	Button* quitButton = Button_new(QUIT, mainMenuPanel, quitRect, 180, "Textures/main buttons.bmp");
 	if (!quitButton){
 		return 1;
 	}
@@ -722,6 +789,22 @@ int setScreenToGame(){
 	if(!buttonsPanel){
 		return 1;
 	}
+	buttonsPanel->children = LinkedList_new(&Button_free);
+	if(!buttonsPanel->children){
+		return 1;
+	}
+	
+	int buttonValues[3] = {MAIN_MENU, SAVE, QUIT};
+	for (int i = 0; i <= 2; i++){
+		SDL_Rect buttonRect = {1.5*TILE_SIZE + 200*i, 0.2*TILE_SIZE , 156, 40};
+		Button* button = Button_new(buttonValues[i], buttonsPanel, buttonRect, i*40, "Textures/gameButtons.bmp");
+		if(!button){
+			return 1;
+		}
+		LinkedList_add(buttonsPanel->children, button);
+		LinkedList_add(window->buttons, button);
+	}
+	
 	
 	LinkedList_add(window->children, boardNumbersPanel);
 	LinkedList_add(window->children, buttonsPanel);
@@ -747,15 +830,15 @@ int setScreenToAISettings(){
 	for (int i = 0; i <= 4; i++){
 		SDL_Rect crop = {0, i*24, 48, 24};
 		SDL_Rect pos = {24+3*TILE_SIZE, i*24+5*TILE_SIZE, 48, 24};
-		Radio* difficultyRadio = Radio_new("difficultyLabels.bmp", AISettingsPanel->surface, crop, pos, i);
+		Radio* difficultyRadio = Radio_new("Textures/difficultyLabels.bmp", AISettingsPanel->surface, crop, pos, i);
 		if (!difficultyRadio){
 			RadioGroup_free(difficultyRadioGroup);
 			return 1;
 		}
 		RadioGroup_add(difficultyRadioGroup, difficultyRadio);
-		if(Radio_draw(difficultyRadio)){
-			RadioGroup_free(difficultyRadioGroup);
-			return 1;
+		if (i == maxRecursionDepth){
+			difficultyRadio->state = 1;
+			difficultyRadio->group->selected = difficultyRadio;
 		}
 	}
 	
@@ -767,18 +850,18 @@ int setScreenToAISettings(){
 	for (int i = 0; i <= 1; i++){
 		SDL_Rect crop = {0, i*24, 48, 24};
 		SDL_Rect pos = {24+8.5*TILE_SIZE, i*24+5*TILE_SIZE, 48, 24};
-		Radio* AIColorRadio = Radio_new("AIColorLabels.bmp", AISettingsPanel->surface, crop, pos, !i);
+		Radio* AIColorRadio = Radio_new("Textures/nextPlayerLabels.bmp", AISettingsPanel->surface, crop, pos, !i);
 		if (!AIColorRadio){
 			RadioGroup_free(difficultyRadioGroup);
 			RadioGroup_free(AIColorRadioGroup);
 			return 1;
 		}
 		RadioGroup_add(AIColorRadioGroup, AIColorRadio);
-		if(Radio_draw(AIColorRadio)){
-			RadioGroup_free(difficultyRadioGroup);
-			RadioGroup_free(AIColorRadioGroup);
-			return 1;
+		if (!i == !player1){
+			AIColorRadio->state = 1;
+			AIColorRadio->group->selected = AIColorRadio;
 		}
+		
 	}
 	
 	LinkedList_add(window->children, AISettingsPanel);
@@ -800,8 +883,14 @@ int setScreenToInstructions(){
 
 int setScreenToBoardSettings(){
 	prepareWindowForNewScreen();
+	
+	SDL_Rect headerRect = {0, 0, 12*TILE_SIZE, 2*TILE_SIZE};
+	Panel* headerPanel = Panel_new(window->surface, headerRect, &boardSettingsHeaderPanel_draw);
+	if(!headerPanel){
+		return 1;
+	}
+
 	SDL_Rect boardRect = {2*TILE_SIZE, 2*TILE_SIZE, 8*TILE_SIZE, 8*TILE_SIZE};
-		
 	Panel* boardPanel = Panel_new(window->surface, boardRect, &settingsBoardPanel_draw);
 	if(!boardPanel){
 		return 1;
@@ -818,9 +907,10 @@ int setScreenToBoardSettings(){
 		return 1;
 	}
 	
+	//piece buttons
 	for (int i = 3; i <= 16; i++){
 		SDL_Rect buttonRect = {(((i-((i-3)%2))/2)-1)*TILE_SIZE, ((i-3)%2)*TILE_SIZE, TILE_SIZE, TILE_SIZE};
-		Button* button = Button_new(i, piecesPanel, buttonRect, (i-3)*TILE_SIZE, "piecesButtons.bmp");
+		Button* button = Button_new(i, piecesPanel, buttonRect, (i-3)*TILE_SIZE, "Textures/piecesButtons.bmp");
 		if (!button){
 			return 1;
 		}
@@ -831,9 +921,75 @@ int setScreenToBoardSettings(){
 	
 	LinkedList_add(window->children, boardPanel);
 	LinkedList_add(window->children, piecesPanel);
+	LinkedList_add(window->children, headerPanel);
 	
 	return 0;
 }
+
+
+int setScreenToPlayerSettings(){
+	prepareWindowForNewScreen();
+	
+	SDL_Rect playerSettingsRect = {0, 0, 12*TILE_SIZE, 12*TILE_SIZE};
+	Panel* playerSettingsPanel = Panel_new(window->surface, playerSettingsRect, &playerSettingsPanel_draw);
+	if (!playerSettingsPanel){
+		return 1;
+	}
+	
+	RadioGroup* gameModeRadioGroup = RadioGroup_new(&gameMode);
+	if (!gameModeRadioGroup){
+		return 1;
+	}
+	
+	for (int i = 1; i <= 2; i++){
+		SDL_Rect crop = {0, (i-1)*24, 160, 24};
+		SDL_Rect pos = {24+2*TILE_SIZE, (i-1)*24+5*TILE_SIZE, 160, 24};
+		Radio* gameModeRadio = Radio_new("Textures/gameModeLabels.bmp", playerSettingsPanel->surface, crop, pos, i);
+		if (!gameModeRadio){
+			RadioGroup_free(gameModeRadioGroup);
+			return 1;
+		}
+		RadioGroup_add(gameModeRadioGroup, gameModeRadio);
+		if (i == gameMode){
+			gameModeRadio->state = 1;
+			gameModeRadio->group->selected = gameModeRadio;
+		}
+	}
+	
+	RadioGroup* nextPlayerRadioGroup = RadioGroup_new(&first);
+	if (!nextPlayerRadioGroup){
+		return 1;
+	}
+	
+	for (int i = 0; i <= 1; i++){
+		SDL_Rect crop = {0, i*24, 60, 24};
+		SDL_Rect pos = {24+8.5*TILE_SIZE, i*24+5*TILE_SIZE, 60, 24};
+		
+		Radio* nextPlayerRadio = Radio_new("Textures/nextPlayerLabels.bmp", playerSettingsPanel->surface, crop, pos, i);
+		if (!nextPlayerRadio){
+			RadioGroup_free(nextPlayerRadioGroup);
+			return 1;
+		}
+		RadioGroup_add(nextPlayerRadioGroup,nextPlayerRadio);
+		if (i == first){
+			nextPlayerRadio->state = 1;
+			nextPlayerRadio->group->selected = nextPlayerRadio;
+		}
+		
+	}
+	
+	SDL_Rect cancelRect = {2*TILE_SIZE, 11*TILE_SIZE, 156, 40};
+	Button* cancelButton = Button_new(MAIN_MENU, playerSettingsPanel, cancelRect, 120, "Textures/gameButtons.bmp");
+	if(!cancelButton){
+		return 1;
+	}
+	LinkedList_add(window->buttons, cancelButton);	
+	LinkedList_add(window->children, playerSettingsPanel);
+	
+	return 0;
+	
+}
+
 static void Window_free(){
 	LinkedList_free(window->children);
 	if (movesOfSelectedPiece){
@@ -841,6 +997,7 @@ static void Window_free(){
 	}
 	LinkedList_removeAll(window->buttons);
 	free(window->buttons);
+	LinkedList_removeAll(window->radios);
 	free(window->radios);
 	free(window);
 	SDL_Quit();
@@ -861,7 +1018,7 @@ int GUI_init(){
 	if(!window){
 		return 1;
 	}
-	setScreenToBoardSettings();
+	setScreenToMainMenu();
 	return 0;
 }
 

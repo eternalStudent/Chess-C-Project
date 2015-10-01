@@ -39,6 +39,8 @@ LinkedList* movesOfSelectedPiece;
 int gameEnded;
 int isInCheck;
 char modifyingPiece;
+int settingInvalidPiece;
+int kingIsMissing;
 
 int pieceIsPawn(int x, int y);
 

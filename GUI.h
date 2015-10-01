@@ -29,6 +29,8 @@
 #define BLACK_BISHOP 14
 #define REMOVE_PIECE 15
 #define CLEAR 16
+#define MAIN_MENU 17
+#define SAVE 18
 
 typedef struct Window{
 	SDL_Surface* surface;
@@ -96,6 +98,10 @@ void Radio_select(Radio* radio, int state);
 
 void setAllButtonsToNormal();
 
+int setScreenToPlayerSettings();
+
 int setScreenToGame();
+
+int setScreenToMainMenu();
 
 #endif
