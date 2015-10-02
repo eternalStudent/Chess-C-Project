@@ -954,9 +954,13 @@ void computerTurn(){
 	if (!bestMove){
 		allocationFailed();
 	}
-	printf("Computer: ");
-	PossibleMove_print(bestMove);
-	printf("\n");
+	
+	if (displayMode == CONSOLE){
+		printf("Computer: ");
+		PossibleMove_print(bestMove);
+		printf("\n");
+	}
+
 	Board_update(&board, bestMove);
 	PossibleMove_free(bestMove);
 	turn = !turn;
@@ -984,22 +988,45 @@ void humanTurnConsole(int player){
 void executeButton(int buttonId){
 	switch(buttonId){
 		case MAIN_MENU: setScreenToMainMenu(); break;
-		case NEW: setScreenToPlayerSettings(); break;
+		case RETURN_TO_PLAYER_SETTINGS_WITHOUT_SAVING: 
+			if (copyOfMainBoard){
+				Board_free(copyOfMainBoard);
+			}
+			setScreenToPlayerSettings();
+			break;
+		case RETURN_TO_PLAYER_SETTINGS: setScreenToPlayerSettings(); break;
+		case NEW: setScreenToPlayerSettings(); Board_init(&board); break;
 		case QUIT: exit(0); break;
-		case CLEAR: Board_clear(&board); PieceCounter_reset(counter); settingInvalidPiece = 0; break;
-		case BLACK_KING: modifyingPiece = Board_BLACK_KING; break;
-		case BLACK_QUEEN: modifyingPiece = Board_BLACK_QUEEN; break;
-		case BLACK_ROOK: modifyingPiece = Board_BLACK_ROOK; break;
-		case BLACK_BISHOP: modifyingPiece = Board_BLACK_BISHOP; break;
-		case BLACK_KNIGHT: modifyingPiece = Board_BLACK_KNIGHT; break;
-		case BLACK_PAWN: modifyingPiece = Board_BLACK_PAWN; break;
-		case WHITE_KING: modifyingPiece = Board_WHITE_KING; break;
-		case WHITE_QUEEN: modifyingPiece = Board_WHITE_QUEEN; break;
-		case WHITE_ROOK: modifyingPiece = Board_WHITE_ROOK; break;
-		case WHITE_BISHOP: modifyingPiece = Board_WHITE_BISHOP; break;
-		case WHITE_KNIGHT: modifyingPiece = Board_WHITE_KNIGHT; break;
-		case WHITE_PAWN: modifyingPiece = Board_WHITE_PAWN; break;
-		case REMOVE_PIECE: modifyingPiece = Board_EMPTY; break;
+		case CLEAR: Board_clear(copyOfMainBoard); PieceCounter_reset(copyOfMainPieceCounter); settingInvalidPiece = 0; break;
+		case BLACK_KING: kingIsMissing = 0; modifyingPiece = Board_BLACK_KING; break;
+		case BLACK_QUEEN: kingIsMissing = 0; modifyingPiece = Board_BLACK_QUEEN; break;
+		case BLACK_ROOK: kingIsMissing = 0; modifyingPiece = Board_BLACK_ROOK; break;
+		case BLACK_BISHOP: kingIsMissing = 0;  modifyingPiece = Board_BLACK_BISHOP; break;
+		case BLACK_KNIGHT: kingIsMissing = 0;  modifyingPiece = Board_BLACK_KNIGHT; break;
+		case BLACK_PAWN: kingIsMissing = 0;  modifyingPiece = Board_BLACK_PAWN; break;
+		case WHITE_KING: kingIsMissing = 0;  modifyingPiece = Board_WHITE_KING; break;
+		case WHITE_QUEEN: kingIsMissing = 0;  modifyingPiece = Board_WHITE_QUEEN; break;
+		case WHITE_ROOK: kingIsMissing = 0;  modifyingPiece = Board_WHITE_ROOK; break;
+		case WHITE_BISHOP: kingIsMissing = 0;  modifyingPiece = Board_WHITE_BISHOP; break;
+		case WHITE_KNIGHT: kingIsMissing = 0;  modifyingPiece = Board_WHITE_KNIGHT; break;
+		case WHITE_PAWN: kingIsMissing = 0;  modifyingPiece = Board_WHITE_PAWN; break;
+		case REMOVE_PIECE: kingIsMissing = 0;  modifyingPiece = Board_EMPTY; break;
+		case SET_BOARD: setScreenToBoardSettings(); break;
+		case PLAY: setScreenToGame(); break;
+		case AI_SETTINGS: setScreenToAISettings(); break;
+		case FINISHED_SETTING_BOARD:
+			settingInvalidPiece = 0;
+			kingIsMissing = 0;
+			if (PieceCounter_kingIsMissing(copyOfMainPieceCounter)){
+				kingIsMissing = 1;
+			}
+			else{
+				Board_copy(&board, copyOfMainBoard); 
+				Board_free(copyOfMainBoard); 
+				PieceCounter_copy(counter, copyOfMainPieceCounter); 
+				setScreenToPlayerSettings(); 
+			}
+			break;
 	}
 }
 
@@ -1092,29 +1119,29 @@ void humanTurnGUI(int player){
 								int modifiedTileX;
 								int modifiedTileY;
 								convertPixelsToBoardPosition(e, &modifiedTileX, &modifiedTileY);
-								char modifiedPiece = Board_getPiece(&board, modifiedTileX, modifiedTileY);
+								char modifiedPiece = Board_getPiece(copyOfMainBoard, modifiedTileX, modifiedTileY);
 								
 								if (modifyingPiece != Board_EMPTY){ //trying to add a piece
-									if (PieceCounter_isAtMax(counter, modifyingPiece, modifiedTileX, modifiedTileY) || 
+									if (PieceCounter_isAtMax(copyOfMainPieceCounter, modifyingPiece, modifiedTileX, modifiedTileY) || 
 										(pieceIsPawn(modifiedTileX, modifiedTileY) &&
-										Board_isFurthestRowForPlayer(Board_getColor(&board, modifiedTileX, modifiedTileY), modifiedTileY))){
+										Board_isFurthestRowForPlayer(Board_getColor(copyOfMainBoard, modifiedTileX, modifiedTileY), modifiedTileY))){
 										settingInvalidPiece = 1;
 									}
 									
 									else{
 										settingInvalidPiece = 0;
-										Board_setPiece(&board, modifiedTileX, modifiedTileY, modifyingPiece);
-										PieceCounter_update(counter, modifyingPiece, 1, modifiedTileX, modifiedTileY);
+										Board_setPiece(copyOfMainBoard, modifiedTileX, modifiedTileY, modifyingPiece);
+										PieceCounter_update(copyOfMainPieceCounter, modifyingPiece, 1, modifiedTileX, modifiedTileY);
 									}
 								}
 								
 								else{
 									settingInvalidPiece = 0;
-									Board_setPiece(&board, modifiedTileX, modifiedTileY, modifyingPiece);
-									PieceCounter_update(counter, modifiedPiece, -1, modifiedTileX, modifiedTileY);
+									Board_setPiece(copyOfMainBoard, modifiedTileX, modifiedTileY, modifyingPiece);
+									PieceCounter_update(copyOfMainPieceCounter, modifiedPiece, -1, modifiedTileX, modifiedTileY);
 								}
 								
-								modifyingPiece = '_';
+								//modifyingPiece = '_';
 							}
 							else{
 								leftMouseButtonUp(e);

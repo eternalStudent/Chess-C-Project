@@ -64,3 +64,11 @@ void PieceCounter_setToMax(int counter[2][7]){
 int PieceCounter_kingIsMissing(int counter[2][7]){
 	return counter[WHITE][6] == 0 || counter[BLACK][6] == 0;
 }
+
+void PieceCounter_copy(int dest[2][7], int src[2][7]){
+	for (int i = 0; i < 2; i++){
+		for (int j = 0; j < 7; j++){
+			dest[i][j] = src[i][j];
+		}
+	}
+}

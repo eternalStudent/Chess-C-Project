@@ -7,6 +7,7 @@
 #include "Board.h"
 #include "Iterator.h"
 #include "Chess.h"
+#include "PieceCounter.h"
 
 #define TILE_SIZE 64
 #define BLACK_TILE_COLOR 0xd18b47
@@ -31,6 +32,12 @@
 #define CLEAR 16
 #define MAIN_MENU 17
 #define SAVE 18
+#define SET_BOARD 19
+#define RETURN_TO_PLAYER_SETTINGS_WITHOUT_SAVING 20
+#define FINISHED_SETTING_BOARD 21
+#define PLAY 22
+#define AI_SETTINGS 23
+#define RETURN_TO_PLAYER_SETTINGS 24
 
 typedef struct Window{
 	SDL_Surface* surface;
@@ -56,6 +63,7 @@ typedef struct Label{
 
 typedef struct Button{
 	int id;
+	short hidden;
 	SDL_Surface* parent;
 	SDL_Surface* img;
 	SDL_Rect absoluteRect;
@@ -80,6 +88,10 @@ typedef struct RadioGroup{
 	int* parameter;
 } RadioGroup;
 
+Board* copyOfMainBoard;
+
+int copyOfMainPieceCounter[2][7];
+
 int GUI_init();
 
 int GUI_paint();
@@ -103,5 +115,11 @@ int setScreenToPlayerSettings();
 int setScreenToGame();
 
 int setScreenToMainMenu();
+
+int setScreenToBoardSettings();
+
+int setScreenToAISettings();
+
+int setScreenToGame();
 
 #endif

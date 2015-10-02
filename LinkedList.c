@@ -89,6 +89,19 @@ void* LinkedList_first(LinkedList* list){
 	return list->first->data;                                                                      
 }
 
+/*
+ * @return: the second element in the list
+ */
+void* LinkedList_second(LinkedList* list){
+	if (list->first->next){
+		return list->first->next->data;
+	}
+	else{
+		return NULL;
+	}
+	
+}
+
 /* 
  * Frees the list from memory.
  */
@@ -123,6 +136,7 @@ void LinkedList_removeAll(LinkedList* list){
 	ListNode* node = list->first;
 	while (node != NULL){
 		ListNode* next = node->next;
+		list->freeFunc(node->data);
 		free(node);
 		node = next;
 	}

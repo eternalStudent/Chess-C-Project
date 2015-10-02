@@ -132,6 +132,7 @@ static Button* Button_new(int id, Panel* parent, SDL_Rect rect, int y, const cha
 		return NULL;
 	}
 	button->id = id;
+	button->hidden = 0;
 	button->parent = parent->surface;
 	button->relativeRect = rect;
 	SDL_Rect absoluteRect = findAbsoluteRectPosition(rect, parent);
@@ -156,8 +157,15 @@ void Button_setToPressed(Button* button){
 	button->current = button->pressed;
 }
 
+void Button_hide(Button* button){
+	button->hidden = 1;
+}
+
 static int Button_draw(void* data){
 	Button* button = (Button*)data;
+	if (button->hidden){
+		return 0;
+	}
 	if (drawSubImage(button->img, button->current, button->parent, button->relativeRect)){
 		return 1;
 	}
@@ -304,7 +312,7 @@ static int MainMenu_draw(Panel* panel){
 	return 0;
 }
 
-static int drawMainBoard(Panel* panel){
+static int drawBoard(Panel* panel, Board* board){
 	SDL_Surface* img = loadImage("Textures/pieces.bmp");
 	if (!img){
 		SDL_FreeSurface(img);
@@ -322,7 +330,7 @@ static int drawMainBoard(Panel* panel){
 				SDL_FreeSurface(img);
 				return 1;
 			}
-			char piece = Board_getPiece(&board, x, y);
+			char piece = Board_getPiece(board, x, y);
 			
 			switch (piece) {
 				case (Board_EMPTY): continue;
@@ -381,7 +389,7 @@ static int settingsBoardPanel_draw(Panel* panel){
 		return 1;
 	}
 	
-	if(drawMainBoard(panel)){
+	if (drawBoard(panel, copyOfMainBoard)){
 		return 1;
 	}
 		
@@ -412,6 +420,12 @@ static int boardSettingsHeaderPanel_draw(Panel* panel){
 		}
 	}
 	
+	if (kingIsMissing){
+		if (drawImageByPath("Textures/kingMissingError.bmp", panel->surface, 2.5*TILE_SIZE, 1.2*TILE_SIZE)){
+			return 1;
+		}
+	}
+	
 	if (Panel_flipAndDraw(panel)){
 		return 1;
 	}
@@ -427,7 +441,7 @@ static int gameBoardPanel_draw(Panel* panel){
 		return 1;
 	}
 	
-	if(drawMainBoard(panel)){
+	if(drawBoard(panel, &board)){
 		SDL_FreeSurface(img);
 		return 1;
 	}
@@ -612,6 +626,14 @@ int AISettingsPanel_draw(Panel* panel){
 		}
 	}
 	
+	Iterator_init(&iterator, window->buttons);
+	while(Iterator_hasNext(&iterator)){
+		Button* button = (Button*)Iterator_next(&iterator);
+		if (Button_draw(button)){
+			return 1;
+		}
+	}
+	
 	if(Panel_flipAndDraw(panel) != 0){
 		return 1;
 	}
@@ -636,6 +658,22 @@ int instructionsPanel_draw(Panel* panel){
 
 int playerSettingsPanel_draw(Panel* panel){
 	if (fillBackground(panel)){
+		return 1;
+	}	
+	
+	Button* AISettingsButton = LinkedList_first(window->buttons);
+	Button* letsPlayButton = LinkedList_second(window->buttons);
+	
+	if (gameMode == SINGLE_PLAYER_MODE){
+		AISettingsButton->hidden = 0;
+		letsPlayButton->hidden = 1;
+	}
+	else{
+		AISettingsButton->hidden = 1;
+		letsPlayButton->hidden = 0;
+	}
+	
+	if (drawImageByPath("Textures/playerSettingsIcon.bmp", panel->surface, 4.2*TILE_SIZE, 1.5*TILE_SIZE)){
 		return 1;
 	}
 	
@@ -668,7 +706,6 @@ int playerSettingsPanel_draw(Panel* panel){
 		}
 	}
 	
-	
 	if(Panel_flipAndDraw(panel) != 0){
 		return 1;
 	}
@@ -679,9 +716,9 @@ int playerSettingsPanel_draw(Panel* panel){
 static void Panel_free(void* data){
 	Panel* panel = (Panel*)data;
 	SDL_FreeSurface(panel->surface);
-	if (panel->children){
-		LinkedList_free(panel->children);
-	}	
+	//if (panel->children){
+		//LinkedList_free(panel->children);
+	//}	
 	free(panel);
 }
 
@@ -715,9 +752,9 @@ static Window* Window_new(int w, int h){
 	
 	return window;
 }
+
 void prepareWindowForNewScreen(){
-	LinkedList_free(window->children);
-	window->children = LinkedList_new(&Panel_free);
+	LinkedList_removeAll(window->children);
 	LinkedList_removeAll(window->buttons);
 	LinkedList_removeAll(window->radios);
 }
@@ -765,6 +802,7 @@ int setScreenToMainMenu(){
 
 int setScreenToGame(){
 	prepareWindowForNewScreen();
+	turn = first;
 	
 	SDL_Rect announcementsRect = {0, 10*TILE_SIZE, 12*TILE_SIZE, 2*TILE_SIZE};
 	Panel* announcementsPanel = Panel_new(window->surface, announcementsRect, &announcementsPanel_draw);
@@ -796,7 +834,7 @@ int setScreenToGame(){
 	
 	int buttonValues[3] = {MAIN_MENU, SAVE, QUIT};
 	for (int i = 0; i <= 2; i++){
-		SDL_Rect buttonRect = {1.5*TILE_SIZE + 200*i, 0.2*TILE_SIZE , 156, 40};
+		SDL_Rect buttonRect = {1.5*TILE_SIZE + 200*i, 0.2*TILE_SIZE, 146, 40};
 		Button* button = Button_new(buttonValues[i], buttonsPanel, buttonRect, i*40, "Textures/gameButtons.bmp");
 		if(!button){
 			return 1;
@@ -860,9 +898,23 @@ int setScreenToAISettings(){
 		if (!i == !player1){
 			AIColorRadio->state = 1;
 			AIColorRadio->group->selected = AIColorRadio;
-		}
-		
+		}	
 	}
+	
+	SDL_Rect cancelRect = {2*TILE_SIZE, 11*TILE_SIZE, 146, 40};
+	Button* cancelButton = Button_new(RETURN_TO_PLAYER_SETTINGS, AISettingsPanel, cancelRect, 120, "Textures/gameButtons.bmp");
+	if(!cancelButton){
+		return 1;
+	}
+	
+	SDL_Rect letsPlayRect = {8*TILE_SIZE, 11*TILE_SIZE, 146, 40};
+	Button* letsPlayButton = Button_new(PLAY, AISettingsPanel, letsPlayRect, 280, "Textures/gameButtons.bmp");
+	if (!letsPlayButton){
+		return 1;
+	}
+	
+	LinkedList_add(window->buttons, cancelButton);
+	LinkedList_add(window->buttons, letsPlayButton);
 	
 	LinkedList_add(window->children, AISettingsPanel);
 	return 0;
@@ -884,6 +936,13 @@ int setScreenToInstructions(){
 int setScreenToBoardSettings(){
 	prepareWindowForNewScreen();
 	
+	copyOfMainBoard = Board_new();
+	if (!copyOfMainBoard){
+		return 1;
+	}
+	Board_copy(copyOfMainBoard, &board);
+	PieceCounter_copy(copyOfMainPieceCounter, counter);
+	
 	SDL_Rect headerRect = {0, 0, 12*TILE_SIZE, 2*TILE_SIZE};
 	Panel* headerPanel = Panel_new(window->surface, headerRect, &boardSettingsHeaderPanel_draw);
 	if(!headerPanel){
@@ -896,7 +955,7 @@ int setScreenToBoardSettings(){
 		return 1;
 	}
 	
-	SDL_Rect piecesRect = {2.5*TILE_SIZE, 10*TILE_SIZE, 7*TILE_SIZE, 2*TILE_SIZE};
+	SDL_Rect piecesRect = {0, 10*TILE_SIZE, 12*TILE_SIZE, 2*TILE_SIZE};
 	Panel* piecesPanel = Panel_new(window->surface, piecesRect, &piecesPanel_draw);
 	if(!piecesPanel){
 		return 1;
@@ -909,7 +968,7 @@ int setScreenToBoardSettings(){
 	
 	//piece buttons
 	for (int i = 3; i <= 16; i++){
-		SDL_Rect buttonRect = {(((i-((i-3)%2))/2)-1)*TILE_SIZE, ((i-3)%2)*TILE_SIZE, TILE_SIZE, TILE_SIZE};
+		SDL_Rect buttonRect = {(((i-((i-3)%2))/2)-1)*TILE_SIZE + 2.5*TILE_SIZE, ((i-3)%2)*TILE_SIZE, TILE_SIZE, TILE_SIZE};
 		Button* button = Button_new(i, piecesPanel, buttonRect, (i-3)*TILE_SIZE, "Textures/piecesButtons.bmp");
 		if (!button){
 			return 1;
@@ -918,6 +977,21 @@ int setScreenToBoardSettings(){
 		LinkedList_add(window->buttons, button);
 	}
 	
+	SDL_Rect cancelRect = {8, TILE_SIZE, 146, 40};
+	Button* cancelButton = Button_new(RETURN_TO_PLAYER_SETTINGS_WITHOUT_SAVING, piecesPanel, cancelRect, 120, "Textures/gameButtons.bmp");
+	if(!cancelButton){
+		return 1;
+	}
+	LinkedList_add(piecesPanel->children, cancelButton);
+	LinkedList_add(window->buttons, cancelButton);
+	
+	SDL_Rect finishedRect = {9.5*TILE_SIZE, TILE_SIZE, 146, 40};
+	Button* finishedButton = Button_new(FINISHED_SETTING_BOARD, piecesPanel, finishedRect, 200, "Textures/gameButtons.bmp");
+	if(!finishedButton){
+		return 1;
+	}
+	LinkedList_add(piecesPanel->children, finishedButton);
+	LinkedList_add(window->buttons, finishedButton);
 	
 	LinkedList_add(window->children, boardPanel);
 	LinkedList_add(window->children, piecesPanel);
@@ -978,12 +1052,33 @@ int setScreenToPlayerSettings(){
 		
 	}
 	
-	SDL_Rect cancelRect = {2*TILE_SIZE, 11*TILE_SIZE, 156, 40};
+	SDL_Rect cancelRect = {2*TILE_SIZE, 11*TILE_SIZE, 146, 40};
 	Button* cancelButton = Button_new(MAIN_MENU, playerSettingsPanel, cancelRect, 120, "Textures/gameButtons.bmp");
 	if(!cancelButton){
 		return 1;
 	}
+	
+	SDL_Rect setBoardRect = {8*TILE_SIZE, 10*TILE_SIZE, 146, 40};
+	Button* setBoardButton = Button_new(SET_BOARD, playerSettingsPanel, setBoardRect, 160, "Textures/gameButtons.bmp");
+	if (!setBoardButton){
+		return 1;
+	}
+	
+	SDL_Rect letsPlayOrAISettings_Rect = {8*TILE_SIZE, 11*TILE_SIZE, 146, 40};
+	Button* AISettingsButton = Button_new(AI_SETTINGS, playerSettingsPanel, letsPlayOrAISettings_Rect, 240, "Textures/gameButtons.bmp");
+	if (!AISettingsButton){
+		return 1;
+	}
+	
+	Button* letsPlayButton = Button_new(PLAY, playerSettingsPanel, letsPlayOrAISettings_Rect, 280, "Textures/gameButtons.bmp");
+	if (!letsPlayButton){
+		return 1;
+	}
+	
+	LinkedList_add(window->buttons, AISettingsButton);
+	LinkedList_add(window->buttons, letsPlayButton);
 	LinkedList_add(window->buttons, cancelButton);	
+	LinkedList_add(window->buttons, setBoardButton);	
 	LinkedList_add(window->children, playerSettingsPanel);
 	
 	return 0;
@@ -995,10 +1090,12 @@ static void Window_free(){
 	if (movesOfSelectedPiece){
 		LinkedList_free(movesOfSelectedPiece);
 	}
-	LinkedList_removeAll(window->buttons);
-	free(window->buttons);
-	LinkedList_removeAll(window->radios);
-	free(window->radios);
+	// LinkedList_removeAll(window->buttons);
+	// free(window->buttons);
+	// LinkedList_removeAll(window->radios);
+	// free(window->radios);
+	LinkedList_free(window->buttons);
+	LinkedList_free(window->radios);
 	free(window);
 	SDL_Quit();
 }
@@ -1012,6 +1109,7 @@ int GUI_init(){
 		return 1;
 	}
 	atexit(Window_free);
+	copyOfMainBoard = NULL;
 	
 	//create tree
 	window = Window_new(768, 768);
@@ -1053,7 +1151,7 @@ Button* getButtonByMousePosition(int x, int y){
 	Iterator_init(&iterator, window->buttons);
 	while (Iterator_hasNext(&iterator)){
 		Button* button = (Button*)Iterator_next(&iterator);
-		if (Rect_contains(button->absoluteRect, x, y)){
+		if ((Rect_contains(button->absoluteRect, x, y)) && (button->hidden == 0)){
 			return button;
 		}
 	}

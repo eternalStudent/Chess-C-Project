@@ -30,5 +30,5 @@ Iterator.o: Iterator.c Iterator.h LinkedList.h
 LinkedList.o: LinkedList.c LinkedList.h
 	gcc -c $(CFLAGS) LinkedList.c
 	
-GUI.o: GUI.c Board.h LinkedList.h Iterator.h
+GUI.o: GUI.c Board.h LinkedList.h Iterator.h Chess.h PieceCounter.h
 	gcc -c $(CFLAGS) -lm GUI.c 

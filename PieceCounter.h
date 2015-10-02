@@ -9,4 +9,6 @@ void PieceCounter_reset(int counter[2][7]);
 void PieceCounter_setToMax(int counter[2][7]);
 
 int PieceCounter_kingIsMissing(int counter[2][7]);
+
+void PieceCounter_copy(int dest[2][7], int src[2][7]);
 #endif
