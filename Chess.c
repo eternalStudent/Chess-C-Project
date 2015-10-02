@@ -1,5 +1,4 @@
 #include "Chess.h" 
-#include "GUI.h"
 
 /*
  * Initializes the global variables.
@@ -22,6 +21,8 @@ void initialize(){
 	settingInvalidPiece = 0;
 	kingIsMissing = 0;
 	modifyingPiece = '_';
+	time_t t;
+	srand((unsigned) time(&t));
 }
 
 void display(){
@@ -79,9 +80,9 @@ int alphabeta(PossibleMove* possibleMove, int depth, int player, int alpha, int 
 			extremum = score;
 			break;
 		}
-		if (	(player != player1 && score <  extremum) || 
-				(player == player1 && score >  extremum) || 
-				(rand()%2          && score == extremum)
+		if (	(player != turn && score <  extremum) || 
+				(player == turn && score >  extremum) || 
+				(rand()%2       && score == extremum)
 			){
 			extremum = score;
 		}
@@ -90,7 +91,7 @@ int alphabeta(PossibleMove* possibleMove, int depth, int player, int alpha, int 
 			break;
 		}
 		//alpha-beta pruning
-		if (player == player1){
+		if (turn == player){
 			alpha = (score > alpha)? score: alpha;
 			if (alpha >= beta){
 				break;
@@ -560,6 +561,7 @@ int printBestMoves(char* command){
 			return -1;
 		}
 	}
+	
 	LinkedList* allPossibleMoves = Board_getPossibleMoves(&board, turn);
 	if (!allPossibleMoves){
 		return 1;
@@ -575,6 +577,7 @@ int printBestMoves(char* command){
 	while(Iterator_hasNext(&iterator)){
 		PossibleMove* currentMove = (PossibleMove*)Iterator_next(&iterator);
 		int score = alphabeta(currentMove, depth, !turn, INT_MIN, INT_MAX);
+		PossibleMove_print(currentMove);
 		if (score > bestScore) {
 			LinkedList_removeAll(bestMoves);
 			LinkedList_add(bestMoves, currentMove);
@@ -615,7 +618,7 @@ int printMoveValue(char* command){
 			return exitcode;
 		}
 		else{
-			int score = alphabeta(move, depth+1, turn, INT_MIN, INT_MAX);
+			int score = alphabeta(move, depth, !turn, INT_MIN, INT_MAX);
 			printf("%d\n", score);
 			PossibleMove_free(move);			
 		}
@@ -626,7 +629,7 @@ int printMoveValue(char* command){
 		exitcode = readTile(command + 19, &rookX, &rookY); 
 		if (exitcode == 0){
 			PossibleMove* castlingMove = PossibleMove_new(rookX, rookY, 0, 0, 0, &board);
-			int score = alphabeta(castlingMove, depth+1, turn, INT_MIN, INT_MAX);
+			int score = alphabeta(castlingMove, depth, !turn, INT_MIN, INT_MAX);
 			printf("%d\n", score);
 			PossibleMove_free(castlingMove);	
 		}
@@ -913,20 +916,22 @@ PossibleMove* minimax(){
 	if (!allPossibleMoves){
 		allocationFailed();
 	}
-	Iterator iterator;
-	Iterator_init(&iterator, allPossibleMoves);
+	
 	int bestScore = INT_MIN;
 	PossibleMove* bestMove = NULL;
 	int bestDepth = 0;
 	if (maxRecursionDepth == BEST){
 		bestDepth = computeBestDepth(turn);
 	}
+	
+	Iterator iterator;
+	Iterator_init(&iterator, allPossibleMoves);
 	while(Iterator_hasNext(&iterator)){
 		PossibleMove* currentMove = (PossibleMove*)Iterator_next(&iterator);
 		int score = (maxRecursionDepth == BEST)?
 				alphabeta(currentMove, bestDepth, !turn, INT_MIN, INT_MAX): 
 				alphabeta(currentMove, maxRecursionDepth, !turn, INT_MIN, INT_MAX);
-				
+		
 		if (score == -10001){ //allocation error occurred in alphabeta
 			PossibleMoveList_free(allPossibleMoves);
 			return NULL;

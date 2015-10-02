@@ -754,9 +754,9 @@ static Window* Window_new(int w, int h){
 }
 
 void prepareWindowForNewScreen(){
-	LinkedList_removeAll(window->children);
-	LinkedList_removeAll(window->buttons);
-	LinkedList_removeAll(window->radios);
+	LinkedList_freeNodesOnly(window->children);
+	LinkedList_freeNodesOnly(window->buttons);
+	LinkedList_freeNodesOnly(window->radios);
 }
 
 int setScreenToMainMenu(){
@@ -842,7 +842,6 @@ int setScreenToGame(){
 		LinkedList_add(buttonsPanel->children, button);
 		LinkedList_add(window->buttons, button);
 	}
-	
 	
 	LinkedList_add(window->children, boardNumbersPanel);
 	LinkedList_add(window->children, buttonsPanel);
@@ -1090,10 +1089,7 @@ static void Window_free(){
 	if (movesOfSelectedPiece){
 		LinkedList_free(movesOfSelectedPiece);
 	}
-	// LinkedList_removeAll(window->buttons);
-	// free(window->buttons);
-	// LinkedList_removeAll(window->radios);
-	// free(window->radios);
+	
 	LinkedList_free(window->buttons);
 	LinkedList_free(window->radios);
 	free(window);

@@ -98,8 +98,20 @@ void* LinkedList_second(LinkedList* list){
 	}
 	else{
 		return NULL;
+	}	
+}
+
+void LinkedList_freeNodesOnly(LinkedList* list){
+	ListNode* node = list->first;
+	while (node != NULL){
+		ListNode* next = node->next;
+		list->freeFunc(node->data);
+		free(node);
+		node = next;
 	}
-	
+	list->length = 0;
+	list->first = NULL;
+	list->last = NULL;
 }
 
 /* 
@@ -136,7 +148,6 @@ void LinkedList_removeAll(LinkedList* list){
 	ListNode* node = list->first;
 	while (node != NULL){
 		ListNode* next = node->next;
-		list->freeFunc(node->data);
 		free(node);
 		node = next;
 	}

@@ -7,11 +7,13 @@
 #include "PieceCounter.h"
 #include "Iterator.h"
 #include "LinkedList.h"
+#include "GUI.h"
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
 #include <ctype.h>
 #include <limits.h>
+#include <time.h>
 
 #define SETTINGS 0
 #define GAME     1
