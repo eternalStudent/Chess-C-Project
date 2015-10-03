@@ -871,10 +871,11 @@ int setScreenToGame(){
 		return 1;
 	}
 	
-	int buttonValues[3] = {MAIN_MENU, SAVE, QUIT};
-	for (int i = 0; i <= 2; i++){
-		SDL_Rect buttonRect = {1.5*TILE_SIZE + 200*i, 0.2*TILE_SIZE, 146, 40};
-		Button* button = Button_new(buttonValues[i], buttonsPanel, buttonRect, i*40, "Textures/gameButtons.bmp");
+	int buttonValues[] = {MAIN_MENU, SAVE, QUIT, HINT};
+	for (int i = 0; i <= 3; i++){
+		SDL_Rect buttonRect = {32 + 186*i, 0.2*TILE_SIZE, 146, 40};
+		int j = i == 3? 8: i;
+		Button* button = Button_new(buttonValues[i], buttonsPanel, buttonRect, j*40, "Textures/gameButtons.bmp");
 		if(!button){
 			return 1;
 		}

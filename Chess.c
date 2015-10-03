@@ -734,34 +734,17 @@ int loadGame(char path[]){
  * @return: -9 if an error occured during the opening of the file
  *			 0 otherwise
  */
-int loadGameFromCommand (char* command){	
+int loadGameByCommand(char* command){	
 	char path[1024];
-	char buff[51];
-	
-	if (sscanf(command, "%4s %1023s", buff, path) != 2){
+	if (sscanf(command, "load %1023s", path) != 1){
 		return -1;
 	}
 	
 	return loadGame(path);
 }	
-
-/*
- * Main function for handling the "save" command, for saving a game during the game stage.
- *
- * @return: -9 if an error occured during the saving of the file or if the specified name does not end with ".xml"
- *			 0 otherwise
- */
-int saveGame (char* command){
-	char fileName[1024];
-	char buff[4];
-	if (sscanf(command, "%4s %1023s", buff, fileName) != 2){
-		return -1;
-	}
-	if (!strstr(fileName, ".xml")){
-		return -9;
-	}
 	
-	FILE* gameFile = fopen(fileName, "w");
+int saveGame(char path[]){
+	FILE* gameFile = fopen(path, "w");
 	if (!gameFile){
 		return -9;
 	}
@@ -817,6 +800,23 @@ int saveGame (char* command){
 	fclose(gameFile);
 	return 0;
 }
+
+/*
+ * Main function for handling the "save" command, for saving a game during the game stage.
+ *
+ * @return: -9 if an error occured during the saving of the file or if the specified name does not end with ".xml"
+ *			 0 otherwise
+ */
+int saveGameByCommand(char* command){
+	char path[1024];
+	if (sscanf(command, "save %1023s", path) != 1){
+		return -1;
+	}
+	if (!strstr(path, ".xml")){
+		return -9;
+	}
+	return saveGame(path);
+}
 	
 /*
  * Executes a command given by the user
@@ -841,7 +841,7 @@ int executeCommand(char* command){
 			return setUserColor(command);
 		}
 		if (str_equals(str, "load")){
-			return loadGameFromCommand(command);
+			return loadGameByCommand(command);
 		}
 		if (str_equals(str, "clear")){
 			Board_clear(&board);
@@ -887,7 +887,7 @@ int executeCommand(char* command){
 			return printMoveValue(command);
 		}	
 		if (str_equals(str,"save")){
-			return saveGame(command);
+			return saveGameByCommand(command);
 		}
 	}
 	return -1;
@@ -996,11 +996,19 @@ void humanTurnConsole(int player){
 		printError(error);
 	}
 }
+
 void executeButton(int buttonId){
 	if (buttonId >= 200){
 		char path[12];
 		sprintf(path, "slot%02d.xml", buttonId-200);
 		loadGame(path);
+		setScreenToGame();
+		return;
+	}
+	if (buttonId >= 100){
+		char path[12];
+		sprintf(path, "slot%02d.xml", buttonId-100);
+		saveGame(path);
 		setScreenToGame();
 		return;
 	}
@@ -1024,6 +1032,8 @@ void executeButton(int buttonId){
 			gameEnded = 0; 
 			break;
 		case LOAD: setScreenToSaveLoad(0); break;
+		case SAVE: setScreenToSaveLoad(1); break;
+		case RETURN_TO_GAME: setScreenToGame(); break;
 		case QUIT: exit(0); break;
 		case CLEAR: Board_clear(copyOfMainBoard); PieceCounter_reset(copyOfMainPieceCounter); settingInvalidPiece = 0; break;
 		case BLACK_KING: kingIsMissing = 0; modifyingPiece = Board_BLACK_KING; break;

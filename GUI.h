@@ -40,6 +40,7 @@
 #define AI_SETTINGS 23
 #define RETURN_TO_PLAYER_SETTINGS 24
 #define RETURN_TO_GAME 25
+#define HINT 26
 
 typedef struct Window{
 	SDL_Surface* surface;
