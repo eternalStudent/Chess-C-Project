@@ -14,6 +14,7 @@
 #include <ctype.h>
 #include <limits.h>
 #include <time.h>
+#include <unistd.h>
 
 #define SETTINGS 0
 #define GAME     1

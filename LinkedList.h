@@ -19,6 +19,10 @@ int LinkedList_add(LinkedList* list, void* data);
 
 void LinkedList_concatenate(LinkedList* this, LinkedList* other);
 
+void LinkedList_concatenateAndFree(LinkedList* this, LinkedList* other);
+
+int LinkedList_addAll(LinkedList* this, LinkedList* other);
+
 int LinkedList_length(LinkedList* list);
 
 void* LinkedList_first(LinkedList* list);

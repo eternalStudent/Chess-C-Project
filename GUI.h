@@ -13,6 +13,7 @@
 #define BLACK_TILE_COLOR 0xd18b47
 #define WHITE_TILE_COLOR 0xffce9e
 #define BACKGROUND_WHITE 0xfffbf0
+#define NUMBER_OF_SAVE_SLOTS 7
 #define NEW  0
 #define LOAD 1
 #define QUIT 2
@@ -38,6 +39,7 @@
 #define PLAY 22
 #define AI_SETTINGS 23
 #define RETURN_TO_PLAYER_SETTINGS 24
+#define RETURN_TO_GAME 25
 
 typedef struct Window{
 	SDL_Surface* surface;
@@ -121,5 +123,7 @@ int setScreenToBoardSettings();
 int setScreenToAISettings();
 
 int setScreenToGame();
+
+int setScreenToSaveLoad(short save);
 
 #endif

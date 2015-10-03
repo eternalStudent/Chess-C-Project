@@ -636,21 +636,10 @@ int printMoveValue(char* command){
 	}
 	return exitcode;
 }
-
-/*
- * Main function for handling the "load" command, for loading a saved game during the settings stage.
- *
- * @return: -9 if an error occured during the opening of the file
- *			 0 otherwise
- */
-int loadGame (char* command){
-	int updatedGameMode = 0;
-	char path[1024];
-	char buff[51];
 	
-	if (sscanf(command, "%4s %1023s", buff, path) != 2){
-		return -1;
-	}
+int loadGame(char path[]){
+	int updatedGameMode = 0;
+	char buff[51];
 	
 	FILE* gameFile = fopen(path, "r");
 	if (!gameFile){
@@ -738,6 +727,23 @@ int loadGame (char* command){
 	display();
 	return 0;
 }
+
+/*
+ * Main function for handling the "load" command, for loading a saved game during the settings stage.
+ *
+ * @return: -9 if an error occured during the opening of the file
+ *			 0 otherwise
+ */
+int loadGameFromCommand (char* command){	
+	char path[1024];
+	char buff[51];
+	
+	if (sscanf(command, "%4s %1023s", buff, path) != 2){
+		return -1;
+	}
+	
+	return loadGame(path);
+}	
 
 /*
  * Main function for handling the "save" command, for saving a game during the game stage.
@@ -835,7 +841,7 @@ int executeCommand(char* command){
 			return setUserColor(command);
 		}
 		if (str_equals(str, "load")){
-			return loadGame(command);
+			return loadGameFromCommand(command);
 		}
 		if (str_equals(str, "clear")){
 			Board_clear(&board);
@@ -991,6 +997,13 @@ void humanTurnConsole(int player){
 	}
 }
 void executeButton(int buttonId){
+	if (buttonId >= 200){
+		char path[12];
+		sprintf(path, "slot%02d.xml", buttonId-200);
+		loadGame(path);
+		setScreenToGame();
+		return;
+	}
 	switch(buttonId){
 		case MAIN_MENU: setScreenToMainMenu(); break;
 		case RETURN_TO_PLAYER_SETTINGS_WITHOUT_SAVING: 
@@ -1010,6 +1023,7 @@ void executeButton(int buttonId){
 			isInCheck = 0; 
 			gameEnded = 0; 
 			break;
+		case LOAD: setScreenToSaveLoad(0); break;
 		case QUIT: exit(0); break;
 		case CLEAR: Board_clear(copyOfMainBoard); PieceCounter_reset(copyOfMainPieceCounter); settingInvalidPiece = 0; break;
 		case BLACK_KING: kingIsMissing = 0; modifyingPiece = Board_BLACK_KING; break;

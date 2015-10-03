@@ -59,9 +59,13 @@ int LinkedList_add(LinkedList* list, void* data){
 	return 0;
 }
 
+/*
+ * Concatenates (this) list with (other) list.
+ *
+ * @params: (other) - a pointer to a list to be concatenated to (this) list
+ */
 void LinkedList_concatenate(LinkedList* this, LinkedList* other){
 	if (other->length == 0){
-		free(other);
 		return;
 	}
 	if (this->length == 0){
@@ -72,7 +76,33 @@ void LinkedList_concatenate(LinkedList* this, LinkedList* other){
 	}
 	this->length += other->length;
 	this->last = other->last;
+}
+
+/*
+ * Concatenates (this) list with (other) list and frees (other) list.
+ *
+ * @params: (other) - a pointer to a list to be concatenated to (this) list
+ */
+void LinkedList_concatenateAndFree(LinkedList* this, LinkedList* other){
+	LinkedList_concatenate(this, other);
 	free(other);
+}
+
+/*
+ * Adds all elements from (other) list to (this) list.
+ *
+ * @params: (other) - a pointer to a list of elements to be added to (this) list
+ * @return: -1 - if any allocation errors occurred, 0 otherwise
+ */
+int LinkedList_addAll(LinkedList* this, LinkedList* other){
+	ListNode* current = other->first;
+	while (current){
+		if (LinkedList_add(this, current->data)){
+			return -1;
+		}
+		current = current->next;
+	}
+	return 0;
 }
 
 /* 

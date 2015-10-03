@@ -713,12 +713,58 @@ int playerSettingsPanel_draw(Panel* panel){
 	return 0;
 }
 
+int saveLoadPanel_draw(Panel* panel, short save){
+	if (fillBackground(panel)){
+		return 1;
+	}
+	
+	SDL_Surface* image = loadImage("Textures/saveLoad.bmp");
+	if (!image){
+		return 1;
+	}
+	SDL_Rect crop = {0, save*60, 264, 60};
+	SDL_Rect pos = {252, 32, 264, 60};
+	if (drawSubImage(image, crop, panel->surface, pos)){
+		return 1;
+	}
+	SDL_FreeSurface(image);
+	
+	if (LinkedList_length(panel->children) <= 1){
+		if (drawImageByPath("Textures/noSaveSlots.bmp", panel->surface, 207, 256)){
+			return 1;
+		}
+	}
+	
+	Iterator iterator;
+	Iterator_init(&iterator, panel->children);
+	while(Iterator_hasNext(&iterator)){
+		Button* button = (Button*)Iterator_next(&iterator);
+		if (Button_draw(button)){
+			return 1;
+		}
+	}
+	
+	if(Panel_flipAndDraw(panel) != 0){
+		return 1;
+	}
+	
+	return 0;
+}
+
+int loadPanel_draw(Panel* panel){
+	return saveLoadPanel_draw(panel, 0);
+}
+
+int savePanel_draw(Panel* panel){
+	return saveLoadPanel_draw(panel, 1);
+}
+
 static void Panel_free(void* data){
 	Panel* panel = (Panel*)data;
 	SDL_FreeSurface(panel->surface);
-	//if (panel->children){
-		//LinkedList_free(panel->children);
-	//}	
+	if (panel->children){
+		LinkedList_free(panel->children);
+	}	
 	free(panel);
 }
 
@@ -755,8 +801,8 @@ static Window* Window_new(int w, int h){
 
 void prepareWindowForNewScreen(){
 	LinkedList_removeAllAndFree(window->children);
-	LinkedList_removeAllAndFree(window->buttons);
-	LinkedList_removeAllAndFree(window->radios);
+	LinkedList_removeAll(window->buttons);
+	LinkedList_removeAll(window->radios);
 }
 
 int setScreenToMainMenu(){
@@ -767,35 +813,28 @@ int setScreenToMainMenu(){
 	if(!mainMenuPanel){
 		return 1;
 	}
+	LinkedList_add(window->children, mainMenuPanel);
+	
 	mainMenuPanel->children = LinkedList_new(&Button_free);
 	if(!mainMenuPanel->children){
 		return 1;
 	}
-	LinkedList_add(window->children, mainMenuPanel);
-	
-	SDL_Rect newGameRect = {166, 256, 436, 90};
-	Button* newGameButton = Button_new(NEW, mainMenuPanel, newGameRect, 0, "Textures/main buttons.bmp");
-	if (!newGameButton){
-		return 1;
+	int buttonsId[3] = {NEW, LOAD, QUIT};
+	for (int y = 0; y <= 180; y += 90){
+		SDL_Rect pos = {166, 256+y, 436, 90};
+		Button* button = Button_new(buttonsId[y/90], mainMenuPanel, pos, y, "Textures/main buttons.bmp");
+		if (!button){
+			return 1;
+		}
+		if (LinkedList_add(mainMenuPanel->children, button)){
+			Button_free(button);
+			return 1;
+		}
+		if (LinkedList_add(window->buttons, button)){
+			Button_free(button);
+			return 1;
+		}
 	}
-	LinkedList_add(mainMenuPanel->children, newGameButton);
-	LinkedList_add(window->buttons, newGameButton);
-	
-	SDL_Rect loadGameRect = {166, 346, 436, 90};
-	Button* loadGameButton = Button_new(LOAD, mainMenuPanel, loadGameRect, 90, "Textures/main buttons.bmp");
-	if (!loadGameButton){
-		return 1;
-	}
-	LinkedList_add(mainMenuPanel->children, loadGameButton);
-	LinkedList_add(window->buttons, loadGameButton);
-	
-	SDL_Rect quitRect = {166, 436, 436, 90};
-	Button* quitButton = Button_new(QUIT, mainMenuPanel, quitRect, 180, "Textures/main buttons.bmp");
-	if (!quitButton){
-		return 1;
-	}
-	LinkedList_add(mainMenuPanel->children, quitButton);
-	LinkedList_add(window->buttons, quitButton);
 	
 	return 0;
 }
@@ -1078,10 +1117,50 @@ int setScreenToPlayerSettings(){
 	LinkedList_add(window->buttons, letsPlayButton);
 	LinkedList_add(window->buttons, cancelButton);	
 	LinkedList_add(window->buttons, setBoardButton);	
-	LinkedList_add(window->children, playerSettingsPanel);
-	
+	LinkedList_add(window->children, playerSettingsPanel);	
 	return 0;
+}
+
+int setScreenToSaveLoad(short save){
+	prepareWindowForNewScreen();
 	
+	SDL_Rect rect = {0, 0, 768, 768};
+	Panel* saveLoadPanel = save? 	Panel_new(window->surface, rect, &savePanel_draw):
+									Panel_new(window->surface, rect, &loadPanel_draw);
+	saveLoadPanel->children = LinkedList_new(&Button_free);
+	LinkedList_add(window->children, saveLoadPanel);
+	
+	for (int i = 0; i < NUMBER_OF_SAVE_SLOTS; i++){
+		if (!save){
+			char buf[12];
+			sprintf(buf, "slot%02d.xml", i);
+			printf("%s\n", buf);
+			const char* path = &buf[0];
+			if (access(path, R_OK)){
+				continue;
+			}
+		}
+		int row = i/4;
+		int col = i%4;
+		SDL_Rect pos = {128+col*128, 128+row*128, 128, 128};
+		int buttonId = save? 100+i: 200+i;
+		Button* button = Button_new(buttonId, saveLoadPanel, pos, 0, "Textures/saveSlots.bmp");
+		if (!button){
+			return 1;
+		}
+		LinkedList_add(saveLoadPanel->children, button);
+		LinkedList_add(window->buttons, button);
+	}
+	
+	SDL_Rect pos = {311, 576, 146, 40};
+	int buttonId = save? RETURN_TO_GAME: MAIN_MENU;
+	Button* button = Button_new(buttonId, saveLoadPanel, pos, 120, "Textures/gameButtons.bmp");
+	if (!button){
+		return 1;
+	}
+	LinkedList_add(saveLoadPanel->children, button);
+	LinkedList_add(window->buttons, button);
+	return 0;
 }
 
 static void Window_free(){
