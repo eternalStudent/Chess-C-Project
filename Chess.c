@@ -577,7 +577,6 @@ int printBestMoves(char* command){
 	while(Iterator_hasNext(&iterator)){
 		PossibleMove* currentMove = (PossibleMove*)Iterator_next(&iterator);
 		int score = alphabeta(currentMove, depth, !turn, INT_MIN, INT_MAX);
-		PossibleMove_print(currentMove);
 		if (score > bestScore) {
 			LinkedList_removeAll(bestMoves);
 			LinkedList_add(bestMoves, currentMove);
@@ -591,6 +590,32 @@ int printBestMoves(char* command){
 	LinkedList_removeAll(bestMoves);	//frees the nodes
 	LinkedList_free(bestMoves);			//frees the struct
 	LinkedList_free(allPossibleMoves);	//frees the moves
+	return 0;
+}
+
+int setSelectedMoveToBest(){
+	LinkedList_removeAllAndFree(movesOfSelectedPiece);
+	LinkedList* allPossibleMoves = Board_getPossibleMoves(&board, turn);
+	if (!allPossibleMoves){
+		return -1;
+	}
+	
+	int bestScore = INT_MIN;
+	Iterator iterator;
+	Iterator_init(&iterator, allPossibleMoves);
+	while(Iterator_hasNext(&iterator)){
+		PossibleMove* currentMove = (PossibleMove*)Iterator_next(&iterator);
+		int score = alphabeta(currentMove, 3, !turn, INT_MIN, INT_MAX);
+		if (score > bestScore || (score == bestScore && rand()%2)) {
+			LinkedList_removeAllAndFree(movesOfSelectedPiece);
+			LinkedList_add(movesOfSelectedPiece, currentMove);
+			bestScore = score;
+		}
+	}
+	LinkedList_free(allPossibleMoves);
+	
+	selectedX = ((PossibleMove*)LinkedList_first(movesOfSelectedPiece))->fromX;
+	selectedY = ((PossibleMove*)LinkedList_first(movesOfSelectedPiece))->fromY;
 	return 0;
 }
 
@@ -1034,6 +1059,7 @@ void executeButton(int buttonId){
 		case LOAD: setScreenToSaveLoad(0); break;
 		case SAVE: setScreenToSaveLoad(1); break;
 		case RETURN_TO_GAME: setScreenToGame(); break;
+		case HINT: setSelectedMoveToBest(); break;
 		case QUIT: exit(0); break;
 		case CLEAR: Board_clear(copyOfMainBoard); PieceCounter_reset(copyOfMainPieceCounter); settingInvalidPiece = 0; break;
 		case BLACK_KING: kingIsMissing = 0; modifyingPiece = Board_BLACK_KING; break;
