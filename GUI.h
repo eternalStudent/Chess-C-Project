@@ -39,8 +39,16 @@
 #define PLAY 22
 #define AI_SETTINGS 23
 #define RETURN_TO_PLAYER_SETTINGS 24
-#define RETURN_TO_GAME 25
-#define HINT 26
+#define PROMOTE_TO_BLACK_QUEEN 25
+#define PROMOTE_TO_BLACK_BISHOP 26
+#define	PROMOTE_TO_BLACK_ROOK 27
+#define PROMOTE_TO_BLACK_KNIGHT 28
+#define PROMOTE_TO_WHITE_QUEEN 29
+#define PROMOTE_TO_WHITE_BISHOP 30
+#define PROMOTE_TO_WHITE_ROOK 31
+#define PROMOTE_TO_WHITE_KNIGHT 32
+#define RETURN_TO_GAME 33
+#define HINT 34
 
 typedef struct Window{
 	SDL_Surface* surface;
@@ -55,6 +63,7 @@ typedef struct Panel{
 	int (*drawFunc)(struct Panel*);
 	LinkedList* children;
 	SDL_Surface* parent;
+	short hidden;
 } Panel;
 
 typedef struct Label{

@@ -282,6 +282,7 @@ static Panel* Panel_new(SDL_Surface* parent, SDL_Rect rect, int(*drawFunc)(Panel
 	panel->parent = parent;	
 	panel->drawFunc = drawFunc;
 	panel->children = NULL;
+	panel->hidden = 0;
 	return panel;
 }
 
@@ -538,8 +539,11 @@ static int announcementsPanel_draw(Panel* panel){
 		}
 		
 		int moveImageRowToDrawByTurn = (turn == WHITE)? 0 : 30;
-		SDL_Rect crop = {0, moveImageRowToDrawByTurn, makeYourMove->w, 0.5*(makeYourMove->h)};
-		SDL_Rect pos = {3*TILE_SIZE, TILE_SIZE, makeYourMove->w, 0.5*(makeYourMove->h)};
+		int promotionImageRowToDrawByTurn = (turn == WHITE)? 60 : 90;
+		int rowToDraw = (chosePromotionMove)? promotionImageRowToDrawByTurn : moveImageRowToDrawByTurn; 
+	
+		SDL_Rect crop = {0, rowToDraw, makeYourMove->w, 0.25*(makeYourMove->h)};
+		SDL_Rect pos = {3*TILE_SIZE, TILE_SIZE, makeYourMove->w, 0.2*(makeYourMove->h)};
 		
 		if (drawSubImage(makeYourMove, crop, panel->surface, pos) != 0){
 			SDL_FreeSurface(makeYourMove);
@@ -759,6 +763,47 @@ int savePanel_draw(Panel* panel){
 	return saveLoadPanel_draw(panel, 1);
 }
 
+int promotionPanel_draw(Panel* panel){
+	panel->hidden = (chosePromotionMove)? 0 : 1;
+
+	if (panel->hidden){
+		return 0;
+	}
+	
+	if (fillBackground(panel)){
+		return 1;
+	}
+	
+	int index = 0;
+	Iterator iterator;
+	Iterator_init(&iterator, panel->children);
+	while(Iterator_hasNext(&iterator)){
+		Button* button = (Button*)Iterator_next(&iterator);
+		if ((turn == WHITE && index < 4) || (turn == BLACK && index > 3)){
+			// printf("index is %d, turn is %d, so turning this button's hidden to 1\n", index, turn);
+			button->hidden = 1;
+		}
+		if ((turn == WHITE && index > 3) || (turn == BLACK && index < 4)){
+			// printf("index is %d, turn is %d, so turning this button's hidden to 0\n", index, turn);
+			button->hidden = 0;
+		}
+		index++;
+	}
+	
+	Iterator_init(&iterator, panel->children);
+	while(Iterator_hasNext(&iterator)){
+		Button* button = (Button*)Iterator_next(&iterator);
+		if (Button_draw(button)){
+			return 1;
+		}
+	}
+	
+	if(Panel_flipAndDraw(panel) != 0){
+		return 1;
+	}
+	
+	return 0;
+}
 static void Panel_free(void* data){
 	Panel* panel = (Panel*)data;
 	SDL_FreeSurface(panel->surface);
@@ -883,6 +928,46 @@ int setScreenToGame(){
 		LinkedList_add(window->buttons, button);
 	}
 	
+	SDL_Rect promotionRect = {11*TILE_SIZE, 2*TILE_SIZE, TILE_SIZE, 4*TILE_SIZE};
+	Panel* promotionPanel = Panel_new(window->surface, promotionRect, &promotionPanel_draw);
+	if (!promotionPanel){
+		return 1;
+	}
+	promotionPanel->children = LinkedList_new(&Button_free);
+	if(!promotionPanel->children){
+		return 1;
+	}
+	promotionPanel->hidden = 1;
+	
+	char* possiblePromotions = (char[8]){Board_BLACK_QUEEN, Board_BLACK_BISHOP, Board_BLACK_ROOK, Board_BLACK_KNIGHT,
+							   Board_WHITE_QUEEN, Board_WHITE_BISHOP, Board_WHITE_ROOK, Board_WHITE_KNIGHT};				    
+	for (int i = 0; i <= 7; i++){
+		char piece = possiblePromotions[i];
+		SDL_Rect piecePosition = {0, (i%4)*TILE_SIZE, TILE_SIZE, TILE_SIZE};
+		short row, value;
+		switch (piece) {
+			case (Board_WHITE_QUEEN): value = PROMOTE_TO_WHITE_QUEEN; row = 0; break; 
+			case (Board_BLACK_QUEEN): value = PROMOTE_TO_BLACK_QUEEN; row = 0; break;
+			case (Board_WHITE_ROOK): value = PROMOTE_TO_WHITE_ROOK; row = 128; break;
+			case (Board_BLACK_ROOK): value = PROMOTE_TO_BLACK_ROOK; row = 128; break;
+			case (Board_WHITE_KNIGHT): value = PROMOTE_TO_WHITE_KNIGHT; row = 192; break;
+			case (Board_BLACK_KNIGHT): value = PROMOTE_TO_BLACK_KNIGHT; row = 192; break;
+			case (Board_WHITE_BISHOP): value = PROMOTE_TO_WHITE_BISHOP; row = 64; break;
+			case (Board_BLACK_BISHOP): value = PROMOTE_TO_BLACK_BISHOP; row = 64; break;
+		}
+		Button* button = (i<4)? Button_new(value, promotionPanel, piecePosition, row, "Textures/blackPromotionButtons.bmp"):
+							    Button_new(value, promotionPanel, piecePosition, row, "Textures/whitePromotionButtons.bmp");
+		if (!button){
+			return 1;
+		}
+		
+		// if ((turn == WHITE && i<4) || (turn == BLACK && i>3)){
+			// button->hidden = 1;
+		// }
+		
+		LinkedList_add(promotionPanel->children, button);
+		LinkedList_add(window->buttons, button);
+	}
 	LinkedList_add(window->children, boardNumbersPanel);
 	LinkedList_add(window->children, buttonsPanel);
 	LinkedList_add(window->children, boardPanel);

@@ -594,7 +594,13 @@ int printBestMoves(char* command){
 }
 
 int setSelectedMoveToBest(){
-	LinkedList_removeAllAndFree(movesOfSelectedPiece);
+	if (movesOfSelectedPiece){
+		LinkedList_free(movesOfSelectedPiece);
+	}
+	movesOfSelectedPiece = LinkedList_new(&PossibleMove_free);
+	if (!movesOfSelectedPiece){
+		return -1;
+	}
 	LinkedList* allPossibleMoves = Board_getPossibleMoves(&board, turn);
 	if (!allPossibleMoves){
 		return -1;
@@ -607,15 +613,16 @@ int setSelectedMoveToBest(){
 		PossibleMove* currentMove = (PossibleMove*)Iterator_next(&iterator);
 		int score = alphabeta(currentMove, 3, !turn, INT_MIN, INT_MAX);
 		if (score > bestScore || (score == bestScore && rand()%2)) {
-			LinkedList_removeAllAndFree(movesOfSelectedPiece);
+			LinkedList_removeAll(movesOfSelectedPiece);
 			LinkedList_add(movesOfSelectedPiece, currentMove);
 			bestScore = score;
 		}
 	}
-	LinkedList_free(allPossibleMoves);
+	PossibleMove* bestMove = (PossibleMove*)LinkedList_first(movesOfSelectedPiece);
+	LinkedList_freeAllButOne(allPossibleMoves, bestMove);
 	
-	selectedX = ((PossibleMove*)LinkedList_first(movesOfSelectedPiece))->fromX;
-	selectedY = ((PossibleMove*)LinkedList_first(movesOfSelectedPiece))->fromY;
+	selectedX = bestMove->fromX;
+	selectedY = bestMove->fromY;
 	return 0;
 }
 
@@ -1022,6 +1029,11 @@ void humanTurnConsole(int player){
 	}
 }
 
+void performPromotion(char piece){
+	Board_setPiece(&board, lastDestinationTileX, lastDestinationTileY, piece); 
+	turn = !turn;
+	chosePromotionMove = 0;
+}
 void executeButton(int buttonId){
 	if (buttonId >= 200){
 		char path[12];
@@ -1055,6 +1067,8 @@ void executeButton(int buttonId){
 			player1 = WHITE; 
 			isInCheck = 0; 
 			gameEnded = 0; 
+			chosePromotionMove = 0;
+			modifyingPiece = '_';
 			break;
 		case LOAD: setScreenToSaveLoad(0); break;
 		case SAVE: setScreenToSaveLoad(1); break;
@@ -1075,6 +1089,14 @@ void executeButton(int buttonId){
 		case WHITE_KNIGHT: kingIsMissing = 0;  modifyingPiece = Board_WHITE_KNIGHT; break;
 		case WHITE_PAWN: kingIsMissing = 0;  modifyingPiece = Board_WHITE_PAWN; break;
 		case REMOVE_PIECE: kingIsMissing = 0;  modifyingPiece = Board_EMPTY; break;
+		case PROMOTE_TO_BLACK_QUEEN: performPromotion(Board_WHITE_QUEEN); break;
+		case PROMOTE_TO_BLACK_BISHOP: performPromotion(Board_BLACK_BISHOP); break;
+		case PROMOTE_TO_BLACK_ROOK: performPromotion(Board_BLACK_ROOK);  break;
+		case PROMOTE_TO_BLACK_KNIGHT: performPromotion(Board_BLACK_KNIGHT);  break;
+		case PROMOTE_TO_WHITE_QUEEN: performPromotion(Board_WHITE_QUEEN); break;
+		case PROMOTE_TO_WHITE_BISHOP: performPromotion(Board_WHITE_BISHOP);  break;
+		case PROMOTE_TO_WHITE_ROOK: performPromotion(Board_WHITE_ROOK);  break;
+		case PROMOTE_TO_WHITE_KNIGHT: performPromotion(Board_WHITE_KNIGHT);  break;
 		case SET_BOARD: setScreenToBoardSettings(); break;
 		case PLAY: setScreenToGame(); break;
 		case AI_SETTINGS: setScreenToAISettings(); break;
@@ -1109,6 +1131,7 @@ void leftMouseButtonUp(SDL_Event e){
 }
 
 void rightMouseButtonUp(SDL_Event e){
+	chosePromotionMove = 0;
 	int x, y;
 	convertPixelsToBoardPosition(e, &x, &y);
 	if (!Board_getColor(&board, selectedX, selectedY) == turn){
@@ -1119,6 +1142,7 @@ void rightMouseButtonUp(SDL_Event e){
 	char promoteTo = 0;
 	if(pieceIsPawn(selectedX, selectedY) && Board_isFurthestRowForPlayer(turn, y)){
 		promoteTo = (turn = WHITE)? 'q':'Q';        //default promotion
+		chosePromotionMove = 1;
 	}
 	PossibleMove* move = PossibleMove_new(selectedX, selectedY, x, y, promoteTo, &board);
 	
@@ -1145,11 +1169,15 @@ void rightMouseButtonUp(SDL_Event e){
 	}
 	
 	if (legalMove){
+		lastDestinationTileX = move->toX;
+		lastDestinationTileY = move->toY;
 		Board_copy(&board, move->board);
 		PossibleMoveList_free(movesOfSelectedPiece);
 		movesOfSelectedPiece = NULL;
 		selectedX = 0;
-		turn = !turn;
+		if (!chosePromotionMove){
+			turn = !turn;
+		}
 	}
 	PossibleMove_free(move);
 }
@@ -1177,42 +1205,45 @@ void humanTurnGUI(int player){
 						else if (radio){
 							Radio_select(radio, 1);
 						}
-						else{
-							if (modifyingPiece != '_'){
-								
+						else if (modifyingPiece != '_'){
+							if(copyOfMainBoard){ // board settings screen
 								int modifiedTileX;
 								int modifiedTileY;
 								convertPixelsToBoardPosition(e, &modifiedTileX, &modifiedTileY);
 								char modifiedPiece = Board_getPiece(copyOfMainBoard, modifiedTileX, modifiedTileY);
 								
-								if (modifyingPiece != Board_EMPTY){ //trying to add a piece
+								if (modifyingPiece != Board_EMPTY){ //adding a piece
 									if (PieceCounter_isAtMax(copyOfMainPieceCounter, modifyingPiece, modifiedTileX, modifiedTileY) || 
 										(pieceIsPawn(modifiedTileX, modifiedTileY) &&
 										Board_isFurthestRowForPlayer(Board_getColor(copyOfMainBoard, modifiedTileX, modifiedTileY), modifiedTileY))){
 										settingInvalidPiece = 1;
 									}
 									
-									else{
+									else{ 
 										settingInvalidPiece = 0;
 										Board_setPiece(copyOfMainBoard, modifiedTileX, modifiedTileY, modifyingPiece);
 										PieceCounter_update(copyOfMainPieceCounter, modifyingPiece, 1, modifiedTileX, modifiedTileY);
 									}
 								}
 								
-								else{
+								else{ //removing a piece
 									settingInvalidPiece = 0;
 									Board_setPiece(copyOfMainBoard, modifiedTileX, modifiedTileY, modifyingPiece);
 									PieceCounter_update(copyOfMainPieceCounter, modifiedPiece, -1, modifiedTileX, modifiedTileY);
 								}
 								
-								//modifyingPiece = '_';
+								modifyingPiece = '_';
 							}
-							else{
-								leftMouseButtonUp(e);
+							else{ // promotion during game
+								Board_setPiece(&board, lastDestinationTileX, lastDestinationTileY, modifyingPiece);
+								modifyingPiece = '_';
 							}
-							
+						}
+						else{
+							leftMouseButtonUp(e);
 						}
 					}
+
 					else if (e.button.button == SDL_BUTTON_RIGHT){
 						rightMouseButtonUp(e);
 					}
@@ -1305,7 +1336,9 @@ int main(int argc, char* argv[]){
 
 	while (1){
 		if (isEndGame()){
-			break;
+			if (gameMode == CONSOLE){
+				break;
+			}
 		}
 		if (turn != player1 && gameMode == SINGLE_PLAYER_MODE){
 			computerTurn();
