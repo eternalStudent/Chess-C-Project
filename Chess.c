@@ -1000,7 +1000,16 @@ void executeButton(int buttonId){
 			setScreenToPlayerSettings();
 			break;
 		case RETURN_TO_PLAYER_SETTINGS: setScreenToPlayerSettings(); break;
-		case NEW: setScreenToPlayerSettings(); Board_init(&board); break;
+		case NEW: 
+			setScreenToPlayerSettings(); 
+			Board_init(&board); 
+			first=WHITE; 
+			gameMode = TWO_PLAYERS_MODE; 
+			maxRecursionDepth = 1; 
+			player1 = WHITE; 
+			isInCheck = 0; 
+			gameEnded = 0; 
+			break;
 		case QUIT: exit(0); break;
 		case CLEAR: Board_clear(copyOfMainBoard); PieceCounter_reset(copyOfMainPieceCounter); settingInvalidPiece = 0; break;
 		case BLACK_KING: kingIsMissing = 0; modifyingPiece = Board_BLACK_KING; break;

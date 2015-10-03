@@ -101,7 +101,7 @@ void* LinkedList_second(LinkedList* list){
 	}	
 }
 
-void LinkedList_freeNodesOnly(LinkedList* list){
+void LinkedList_removeAllAndFree(LinkedList* list){
 	ListNode* node = list->first;
 	while (node != NULL){
 		ListNode* next = node->next;

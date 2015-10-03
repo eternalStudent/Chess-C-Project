@@ -754,9 +754,9 @@ static Window* Window_new(int w, int h){
 }
 
 void prepareWindowForNewScreen(){
-	LinkedList_freeNodesOnly(window->children);
-	LinkedList_freeNodesOnly(window->buttons);
-	LinkedList_freeNodesOnly(window->radios);
+	LinkedList_removeAllAndFree(window->children);
+	LinkedList_removeAllAndFree(window->buttons);
+	LinkedList_removeAllAndFree(window->radios);
 }
 
 int setScreenToMainMenu(){
