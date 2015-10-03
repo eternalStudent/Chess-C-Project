@@ -1034,6 +1034,7 @@ void performPromotion(char piece){
 	turn = !turn;
 	chosePromotionMove = 0;
 }
+
 void executeButton(int buttonId){
 	if (buttonId >= 200){
 		char path[12];
@@ -1141,7 +1142,7 @@ void rightMouseButtonUp(SDL_Event e){
 	
 	char promoteTo = 0;
 	if(pieceIsPawn(selectedX, selectedY) && Board_isFurthestRowForPlayer(turn, y)){
-		promoteTo = (turn = WHITE)? 'q':'Q';        //default promotion
+		promoteTo = (turn == WHITE)? 'q':'Q';        //default promotion
 		chosePromotionMove = 1;
 	}
 	PossibleMove* move = PossibleMove_new(selectedX, selectedY, x, y, promoteTo, &board);

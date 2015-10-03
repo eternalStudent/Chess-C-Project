@@ -767,6 +767,12 @@ int promotionPanel_draw(Panel* panel){
 	panel->hidden = (chosePromotionMove)? 0 : 1;
 
 	if (panel->hidden){
+		Iterator iterator;
+		Iterator_init(&iterator, panel->children);
+		while(Iterator_hasNext(&iterator)){
+			Button* button = (Button*)Iterator_next(&iterator);
+			button->hidden = 1;
+		}
 		return 0;
 	}
 	
@@ -807,9 +813,9 @@ int promotionPanel_draw(Panel* panel){
 static void Panel_free(void* data){
 	Panel* panel = (Panel*)data;
 	SDL_FreeSurface(panel->surface);
-	if (panel->children){
-		LinkedList_free(panel->children);
-	}	
+	//if (panel->children){
+		//LinkedList_free(panel->children);
+	//}	
 	free(panel);
 }
 
@@ -846,8 +852,8 @@ static Window* Window_new(int w, int h){
 
 void prepareWindowForNewScreen(){
 	LinkedList_removeAllAndFree(window->children);
-	LinkedList_removeAll(window->buttons);
-	LinkedList_removeAll(window->radios);
+	LinkedList_removeAllAndFree(window->buttons);
+	LinkedList_removeAllAndFree(window->radios);
 }
 
 int setScreenToMainMenu(){
@@ -968,10 +974,12 @@ int setScreenToGame(){
 		LinkedList_add(promotionPanel->children, button);
 		LinkedList_add(window->buttons, button);
 	}
+	
 	LinkedList_add(window->children, boardNumbersPanel);
 	LinkedList_add(window->children, buttonsPanel);
 	LinkedList_add(window->children, boardPanel);
 	LinkedList_add(window->children, announcementsPanel);
+	LinkedList_add(window->children, promotionPanel);
 	return 0;
 }
 
