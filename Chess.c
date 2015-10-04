@@ -47,7 +47,10 @@ void allocationFailed(){
  * The minimax AI algorithm.
  */
 int alphabeta(PossibleMove* possibleMove, int depth, int player, int alpha, int beta){
-	int thisBoardScore = Board_getScore(possibleMove->board, turn, player);
+	int (*evaluationFunction)(Board*, int, int) = (maxRecursionDepth == BEST)?
+				&Board_getBetterScore:
+				&Board_getScore;
+	int thisBoardScore = evaluationFunction(possibleMove->board, turn, player);
 	// maximum depth reached or game is over or allocation error occurred in Board_getScore
 	if (depth == 1 || thisBoardScore == 10000 || thisBoardScore == -10000 || thisBoardScore == -10001){
 		return thisBoardScore;
@@ -66,7 +69,7 @@ int alphabeta(PossibleMove* possibleMove, int depth, int player, int alpha, int 
 	//single child node
 	if (LinkedList_length(possibleMoves) == 1){
 		PossibleMove* onlyMove = PossibleMoveList_first(possibleMoves);
-		int score = Board_getScore(onlyMove->board, turn, player);
+		int score = evaluationFunction(onlyMove->board, turn, player);
 		LinkedList_free(possibleMoves);
 		return score;
 	}
@@ -533,12 +536,12 @@ int castleRook(char* command){
 	return 0;
 }
 
-int computeBestDepth(int currentPlayer){
+int computeBestDepth(){
 	int depth = 0;
 	int switcher = 1;
 	int bound = 1;
-	int upperBoundCurrentPlayer = Board_getUpperBoundMoves(&board, currentPlayer);
-	int upperBoundOpponent = Board_getUpperBoundMoves(&board, !currentPlayer);
+	int upperBoundCurrentPlayer = Board_getUpperBoundMoves(&board, turn);
+	int upperBoundOpponent = Board_getUpperBoundMoves(&board, !turn);
 	while (bound <= 1000000){
 		if (switcher){
 			bound *= upperBoundCurrentPlayer;
@@ -594,6 +597,10 @@ int printBestMoves(char* command){
 	return 0;
 }
 
+int getDepth(){
+	return (maxRecursionDepth == BEST)? computeBestDepth(): maxRecursionDepth;
+}
+
 int setSelectedMoveToBest(){
 	if (movesOfSelectedPiece){
 		LinkedList_free(movesOfSelectedPiece);
@@ -612,7 +619,7 @@ int setSelectedMoveToBest(){
 	Iterator_init(&iterator, allPossibleMoves);
 	while(Iterator_hasNext(&iterator)){
 		PossibleMove* currentMove = (PossibleMove*)Iterator_next(&iterator);
-		int score = alphabeta(currentMove, 3, !turn, INT_MIN, INT_MAX);
+		int score = alphabeta(currentMove, getDepth(), !turn, INT_MIN, INT_MAX);
 		if (score > bestScore || (score == bestScore && rand()%2)) {
 			LinkedList_removeAll(movesOfSelectedPiece);
 			LinkedList_add(movesOfSelectedPiece, currentMove);
@@ -962,18 +969,12 @@ PossibleMove* minimax(){
 	
 	int bestScore = INT_MIN;
 	PossibleMove* bestMove = NULL;
-	int bestDepth = 0;
-	if (maxRecursionDepth == BEST){
-		bestDepth = computeBestDepth(turn);
-	}
 	
 	Iterator iterator;
 	Iterator_init(&iterator, allPossibleMoves);
 	while(Iterator_hasNext(&iterator)){
 		PossibleMove* currentMove = (PossibleMove*)Iterator_next(&iterator);
-		int score = (maxRecursionDepth == BEST)?
-				alphabeta(currentMove, bestDepth, !turn, INT_MIN, INT_MAX): 
-				alphabeta(currentMove, maxRecursionDepth, !turn, INT_MIN, INT_MAX);
+		int score = alphabeta(currentMove, getDepth(), !turn, INT_MIN, INT_MAX);
 		
 		if (score == -10001){ //allocation error occurred in alphabeta
 			PossibleMoveList_free(allPossibleMoves);

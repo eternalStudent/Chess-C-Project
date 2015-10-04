@@ -324,6 +324,7 @@ int Board_evalPiece(Board* board, int x, int y, int player){
  * @return: a numeric evaluation of the board
  */
 int Board_getScore(Board* board, int scoredForPlayer, int nextPlayer){
+	//winning or losing scenario
 	int nextPlayerCanMove = Board_possibleMovesExist(board, nextPlayer);
 	if (nextPlayerCanMove == -1){ //allocation error occured in Board_possibleMovesExist
 		return -10001;
@@ -331,11 +332,48 @@ int Board_getScore(Board* board, int scoredForPlayer, int nextPlayer){
 	if (Board_isInCheck(board, nextPlayer) && !nextPlayerCanMove){
 		return scoredForPlayer == nextPlayer? -10000: 10000;
 	}
+	//tie
 	if (!nextPlayerCanMove){
 		return 0;
 	}
 	//otherwise
 	int score = 0;
+	for (int x = 1; x <= Board_SIZE; x++){
+		for (int y = 1; y <= Board_SIZE; y++){
+			score += Board_evalPiece(board, x, y, scoredForPlayer);
+		}
+	}
+	return score;
+}
+
+/*
+ * Evaluates the board according to a slightly better scoring function.
+ *
+ * @return: a numeric evaluation of the board
+ */
+int Board_getBetterScore(Board* board, int scoredForPlayer, int nextPlayer){
+	LinkedList* playerMoves = Board_getPossibleMoves(board, scoredForPlayer);
+	if (!playerMoves){
+		return -10001;
+	}
+	LinkedList* otherPlayerMoves = Board_getPossibleMoves(board, !scoredForPlayer);
+	if (!otherPlayerMoves){
+		LinkedList_free(playerMoves);
+		return -10001;
+	}
+	//winning or losing scenario
+	int nextPlayerCanMove = (scoredForPlayer == nextPlayer)?
+							LinkedList_length(playerMoves):
+							LinkedList_length(otherPlayerMoves);
+	if (Board_isInCheck(board, nextPlayer) && !nextPlayerCanMove){
+		return scoredForPlayer == nextPlayer? -10000: 10000;
+	}
+	//tie
+	if (!nextPlayerCanMove){
+		return 0;
+	}
+	//otherwise
+	int score = (LinkedList_length(playerMoves) - LinkedList_length(otherPlayerMoves))/10;
 	for (int x = 1; x <= Board_SIZE; x++){
 		for (int y = 1; y <= Board_SIZE; y++){
 			score += Board_evalPiece(board, x, y, scoredForPlayer);
