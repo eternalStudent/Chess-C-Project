@@ -49,6 +49,7 @@
 #define PROMOTE_TO_WHITE_KNIGHT 32
 #define RETURN_TO_GAME 33
 #define HINT 34
+#define INSTRUCTIONS 35
 
 typedef struct Window{
 	SDL_Surface* surface;
@@ -91,6 +92,7 @@ typedef struct Radio{
 	int value;
 	Label* label;
 	SDL_Rect pos;
+	SDL_Rect absolutePos;
 	struct RadioGroup* group;
 } Radio;
 
@@ -135,5 +137,7 @@ int setScreenToAISettings();
 int setScreenToGame();
 
 int setScreenToSaveLoad(short save);
+
+int setScreenToInstructions();
 
 #endif

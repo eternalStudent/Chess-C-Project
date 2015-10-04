@@ -74,7 +74,7 @@ int alphabeta(PossibleMove* possibleMove, int depth, int player, int alpha, int 
 		return score;
 	}
 
-	int extremum = (player == player1)? INT_MIN : INT_MAX;
+	int extremum = (player == turn)? INT_MIN : INT_MAX;
 	Iterator iterator;
 	Iterator_init(&iterator, possibleMoves);
 	while (Iterator_hasNext(&iterator)) {
@@ -552,13 +552,14 @@ int computeBestDepth(){
 		depth += 1;
 		switcher = !switcher;
 	}
+	printf("computed depth is %d\n", depth);
 	return depth;
 }
 
 int printBestMoves(char* command){
 	int depth;
 	if (command[15] == 'b'){
-		depth = computeBestDepth(turn);
+		depth = computeBestDepth();
 	}
 	else{
 		if (sscanf(command, "get_best_moves %d", &depth) != 1){
@@ -614,12 +615,13 @@ int setSelectedMoveToBest(){
 		return -1;
 	}
 	
+	int depth = getDepth();
 	int bestScore = INT_MIN;
 	Iterator iterator;
 	Iterator_init(&iterator, allPossibleMoves);
 	while(Iterator_hasNext(&iterator)){
 		PossibleMove* currentMove = (PossibleMove*)Iterator_next(&iterator);
-		int score = alphabeta(currentMove, getDepth(), !turn, INT_MIN, INT_MAX);
+		int score = alphabeta(currentMove, depth, !turn, INT_MIN, INT_MAX);
 		if (score > bestScore || (score == bestScore && rand()%2)) {
 			LinkedList_removeAll(movesOfSelectedPiece);
 			LinkedList_add(movesOfSelectedPiece, currentMove);
@@ -639,7 +641,7 @@ int printMoveValue(char* command){
 	int depth;
 	int bestOffset = 0;
 	if (command[10] == 'b'){
-		depth = computeBestDepth(turn);
+		depth = computeBestDepth();
 		bestOffset = 3;
 	}
 	else{
@@ -969,12 +971,14 @@ PossibleMove* minimax(){
 	
 	int bestScore = INT_MIN;
 	PossibleMove* bestMove = NULL;
+	int depth = getDepth();
 	
 	Iterator iterator;
 	Iterator_init(&iterator, allPossibleMoves);
 	while(Iterator_hasNext(&iterator)){
 		PossibleMove* currentMove = (PossibleMove*)Iterator_next(&iterator);
-		int score = alphabeta(currentMove, getDepth(), !turn, INT_MIN, INT_MAX);
+		int score = alphabeta(currentMove, depth, !turn, INT_MIN, INT_MAX);
+		printf("evaluated a single move\n");
 		
 		if (score == -10001){ //allocation error occurred in alphabeta
 			PossibleMoveList_free(allPossibleMoves);
@@ -982,15 +986,13 @@ PossibleMove* minimax(){
 		}
 		if (score > bestScore || (score == bestScore && rand()%2)){
 			bestScore = score;
-			if (bestMove){
-				PossibleMove_free(bestMove);
-			}
-			bestMove = PossibleMove_clone(currentMove);
-			if (!bestMove){
-				LinkedList_free(allPossibleMoves);
-				return NULL;
-			}
+			bestMove = currentMove;
 		}
+	}
+	bestMove = PossibleMove_clone(bestMove);
+	if (!bestMove){
+		LinkedList_free(allPossibleMoves);
+		return NULL;
 	}
 	LinkedList_free(allPossibleMoves);
 	return bestMove;
@@ -1000,8 +1002,6 @@ PossibleMove* minimax(){
  * The computer turn procedure.
  */
 void computerTurn(){
-	printf("Entered computerTurn!\n");
-	
 	PossibleMove* bestMove = minimax();
 	if (!bestMove){
 		printf("bestMove in computerTurn is NULL\n");
@@ -1096,6 +1096,7 @@ void executeButton(int buttonId){
 			setSelectedMoveToBest(); 
 			break;
 		case QUIT: exit(0); break;
+		case INSTRUCTIONS: setScreenToInstructions(); break; 
 		case CLEAR: Board_clear(copyOfMainBoard); PieceCounter_reset(copyOfMainPieceCounter); settingInvalidPiece = 0; break;
 		case BLACK_KING: kingIsMissing = 0; modifyingPiece = Board_BLACK_KING; break;
 		case BLACK_QUEEN: kingIsMissing = 0; modifyingPiece = Board_BLACK_QUEEN; break;

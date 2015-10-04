@@ -379,6 +379,10 @@ int Board_getBetterScore(Board* board, int scoredForPlayer, int nextPlayer){
 			score += 10*Board_evalPiece(board, x, y, scoredForPlayer);
 		}
 	}
+	
+	LinkedList_free(playerMoves);
+	LinkedList_free(otherPlayerMoves);
+	
 	return score;
 }
 
