@@ -382,7 +382,7 @@ int Board_getBetterScore(Board* board, int scoredForPlayer, int nextPlayer){
 	return score;
 }
 
-int Board_evalMovesByPiece(Board* board, int x, int y, int player){
+static int getApproxNumOfMovesPerPiece(Board* board, int x, int y, int player){
 	int color = Board_getColor(board, x, y);
 	if (color != player){
 		return 0;
@@ -391,13 +391,13 @@ int Board_evalMovesByPiece(Board* board, int x, int y, int player){
 	int value = 0;
 	switch (piece){
 		case Board_BLACK_PAWN:
-		case Board_WHITE_PAWN:   value =  12;   break;
+		case Board_WHITE_PAWN:   value =  2;   break;
 		case Board_BLACK_BISHOP:
-		case Board_WHITE_BISHOP: value =  13;   break;
+		case Board_WHITE_BISHOP: value =  7;   break;
 		case Board_BLACK_ROOK:
-		case Board_WHITE_ROOK:   value =  14;   break;
+		case Board_WHITE_ROOK:   value =  7;   break;
 		case Board_BLACK_QUEEN:
-		case Board_WHITE_QUEEN:  value =  28;   break;
+		case Board_WHITE_QUEEN:  value =  14;   break;
 		case Board_BLACK_KNIGHT:
 		case Board_WHITE_KNIGHT: value =  8;   break;
 		case Board_BLACK_KING:
@@ -410,7 +410,7 @@ int Board_getUpperBoundMoves(Board* board, int player){
 	int bound = 0;
 	for (int x = 1; x <= Board_SIZE; x++){
 		for (int y = 1; y <= Board_SIZE; y++){
-			bound += Board_evalMovesByPiece(board, x, y, player);
+			bound += getApproxNumOfMovesPerPiece(board, x, y, player);
 		}
 	}
 	return bound;
