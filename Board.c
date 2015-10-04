@@ -767,7 +767,7 @@ static LinkedList* getRookMoves(Board* board, int fromX, int fromY, int calledFo
 			PossibleMoveList_free(possibleMoves);
 			return NULL;
 		}
-		LinkedList_concatenate(possibleMoves, castlingMoves);
+		LinkedList_concatenateAndFree(possibleMoves, castlingMoves);
 	}
 	return possibleMoves;
 }
@@ -790,7 +790,7 @@ static LinkedList* getQueenMoves(Board* board, int fromX, int fromY, int already
 		return NULL;
 	}
 	
-	LinkedList_concatenate(possibleMoves1, possibleMoves2);
+	LinkedList_concatenateAndFree(possibleMoves1, possibleMoves2);
 	return possibleMoves1;
 }
 
@@ -848,14 +848,14 @@ static LinkedList* getKingMoves(Board* board, int fromX, int fromY, int alreadyG
 			PossibleMoveList_free(possibleMoves);
 			return NULL;
 		}
-		LinkedList_concatenate(possibleMoves, castlingMoves1);
+		LinkedList_concatenateAndFree(possibleMoves, castlingMoves1);
 		
 		LinkedList* castlingMoves2 = getCastlingMoves(board, 8, fromY);
 		if (!castlingMoves2){
 			PossibleMoveList_free(possibleMoves);
 			return NULL;
 		}
-		LinkedList_concatenate(possibleMoves, castlingMoves2);
+		LinkedList_concatenateAndFree(possibleMoves, castlingMoves2);
 	}
 	return possibleMoves;
 }
@@ -909,7 +909,7 @@ LinkedList* Board_getPossibleMoves(Board* board, int player){
 				PossibleMoveList_free(possibleMoves);
 				return NULL;
 			}
-			LinkedList_concatenate(possibleMoves, pieceMoves);
+			LinkedList_concatenateAndFree(possibleMoves, pieceMoves);
 		}
 	}
 	return possibleMoves;
