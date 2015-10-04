@@ -48,6 +48,7 @@ short chosePromotionMove;
 int lastDestinationTileX;
 int lastDestinationTileY;
 
+
 int pieceIsPawn(int x, int y);
 
 #endif

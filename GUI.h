@@ -13,7 +13,7 @@
 #define BLACK_TILE_COLOR 0xd18b47
 #define WHITE_TILE_COLOR 0xffce9e
 #define BACKGROUND_WHITE 0xfffbf0
-#define NUMBER_OF_SAVE_SLOTS 7
+#define NUMBER_OF_SAVE_SLOTS 16
 #define NEW  0
 #define LOAD 1
 #define QUIT 2

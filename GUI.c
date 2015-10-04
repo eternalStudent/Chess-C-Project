@@ -232,6 +232,7 @@ void Radio_select(Radio* radio, int state){
 void Radio_free(void* data){
 	Radio* radio = (Radio*)data;
 	Label_free(radio->label);
+	free(radio);
 }
 
 RadioGroup* RadioGroup_new(int* parameter){
@@ -264,6 +265,7 @@ int RadioGroup_getValue(RadioGroup* group){
 void RadioGroup_free(void* data){
 	RadioGroup* group = (RadioGroup*)data;
 	LinkedList_free(group->radios);
+	free(group);
 }
 
 //Panel functions
@@ -540,10 +542,18 @@ static int announcementsPanel_draw(Panel* panel){
 		
 		int moveImageRowToDrawByTurn = (turn == WHITE)? 0 : 30;
 		int promotionImageRowToDrawByTurn = (turn == WHITE)? 60 : 90;
-		int rowToDraw = (chosePromotionMove)? promotionImageRowToDrawByTurn : moveImageRowToDrawByTurn; 
-	
-		SDL_Rect crop = {0, rowToDraw, makeYourMove->w, 0.25*(makeYourMove->h)};
-		SDL_Rect pos = {3*TILE_SIZE, TILE_SIZE, makeYourMove->w, 0.2*(makeYourMove->h)};
+		int rowToDraw;
+		
+		if ((turn != player1) && (gameMode == SINGLE_PLAYER_MODE)){
+			rowToDraw = (turn == WHITE)? 120 : 150;
+		}
+		
+		else{ 
+			rowToDraw = (chosePromotionMove)? promotionImageRowToDrawByTurn : moveImageRowToDrawByTurn; 
+		}
+ 
+		SDL_Rect crop = {0, rowToDraw, 375, 30};
+		SDL_Rect pos = {3*TILE_SIZE, TILE_SIZE, 375, 30};
 		
 		if (drawSubImage(makeYourMove, crop, panel->surface, pos) != 0){
 			SDL_FreeSurface(makeYourMove);
@@ -1027,7 +1037,7 @@ int setScreenToAISettings(){
 			return 1;
 		}
 		RadioGroup_add(AIColorRadioGroup, AIColorRadio);
-		if (!i == !player1){
+		if (i == !player1){
 			AIColorRadio->state = 1;
 			AIColorRadio->group->selected = AIColorRadio;
 		}	
@@ -1228,7 +1238,6 @@ int setScreenToSaveLoad(short save){
 		if (!save){
 			char buf[12];
 			sprintf(buf, "slot%02d.xml", i);
-			printf("%s\n", buf);
 			const char* path = &buf[0];
 			if (access(path, R_OK)){
 				continue;
@@ -1246,7 +1255,7 @@ int setScreenToSaveLoad(short save){
 		LinkedList_add(window->buttons, button);
 	}
 	
-	SDL_Rect pos = {311, 576, 146, 40};
+	SDL_Rect pos = {311, 11*TILE_SIZE, 146, 40};
 	int buttonId = save? RETURN_TO_GAME: MAIN_MENU;
 	Button* button = Button_new(buttonId, saveLoadPanel, pos, 120, "Textures/gameButtons.bmp");
 	if (!button){
@@ -1291,6 +1300,7 @@ int GUI_init(){
 
 int GUI_paint(){
 	// Clear window to BLACK
+	//printf("first is %d\n turn is %d\n, player1 is %d\n \n", first, turn, player1);
 	if (SDL_FillRect(window->surface, 0, BACKGROUND_WHITE) != 0) {
 		printf("ERROR: failed to draw rect: %s\n", SDL_GetError());
 		return 1;
@@ -1316,6 +1326,7 @@ static int Rect_contains(SDL_Rect rect, int x, int y){
 }
 
 Button* getButtonByMousePosition(int x, int y){
+	//printf("first is %d\n turn is %d\n, player1 is %d\n \n", first, turn, player1);
 	Iterator iterator;
 	Iterator_init(&iterator, window->buttons);
 	while (Iterator_hasNext(&iterator)){
@@ -1328,6 +1339,7 @@ Button* getButtonByMousePosition(int x, int y){
 }
 
 Radio* getRadioByMousePosition(int x, int y){
+	//printf("first is %d\n turn is %d\n, player1 is %d\n \n", first, turn, player1);
 	Iterator iterator;
 	Iterator_init(&iterator, window->radios);
 	while (Iterator_hasNext(&iterator)){
@@ -1347,50 +1359,3 @@ void setAllButtonsToNormal(){
 		Button_setToNormal(button);
 	}
 }
-
-// int PromotionDialog_draw(void* data){
-	// int error = 0;
-	// Panel* promotionDialog = (Panel*)data;
-
-	// promotionDialog->children = LinkedList_new(&Button_free);
-	// if(!promotionDialog->children){
-		// return 1;
-	// }
-	
-	// char* possiblePromotions = (turn == BLACK)? (char[4]){Board_BLACK_QUEEN, Board_BLACK_BISHOP, Board_BLACK_ROOK, Board_BLACK_KNIGHT}:
-											      // (char[4]){Board_WHITE_QUEEN, Board_WHITE_BISHOP, Board_WHITE_ROOK, Board_WHITE_KNIGHT};
-	// //creating the buttons
-	// for (int x = 1; x <= 2; x++){
-		// for (int y = 1; y <= 2; y++){
-			// int id = (x-1)*2 + y;
-			// int row;
-			// char piece = possiblePromotions[(x-1)*2 + (y-1)];
-			// SDL_Rect piecePosition = {(x-1)*TILE_SIZE, (2-y)*TILE_SIZE, TILE_SIZE, TILE_SIZE};
-			// switch (piece) {
-				// case (Board_WHITE_QUEEN):
-				// case (Board_BLACK_QUEEN): row = 0; break;
-				// case (Board_WHITE_ROOK): 
-				// case (Board_BLACK_ROOK): row = 128; break;
-				// case (Board_WHITE_KNIGHT):
-				// case (Board_BLACK_KNIGHT): row = 192; break;
-				// case (Board_WHITE_BISHOP):
-				// case (Board_BLACK_BISHOP): row = 64; break;
-			// }
-			
-			// Button* button = (turn == BLACK)? Button_new(id, promotionDialog, piecePosition, row, "blackPromotionButtons.bmp"):
-											  // Button_new(id, promotionDialog, piecePosition, row, "whitePromotionButtons.bmp");
-			// LinkedList_add(promotionDialog->children, button);
-		// }
-	// }
-
-	// //drawing the buttons
-	
-	// Iterator iterator;
-	// Iterator_init(&iterator, promotionDialog->children);
-	// while (Iterator_hasNext(&iterator)){
-		// Button* button = (Button*)Iterator_next(&iterator);
-		// error = Button_draw(button);
-	// }
-	
-	// return error;
-// }

@@ -3,6 +3,7 @@
 /*
  * Initializes the global variables.
  */
+  
 void initialize(){
 	Board_init(&board);
 	if (displayMode == GUI){
@@ -48,7 +49,7 @@ void allocationFailed(){
 int alphabeta(PossibleMove* possibleMove, int depth, int player, int alpha, int beta){
 	int thisBoardScore = Board_getScore(possibleMove->board, turn, player);
 	// maximum depth reached or game is over or allocation error occurred in Board_getScore
-	if (depth == 1 || thisBoardScore == 10000 || thisBoardScore == -10000 || thisBoardScore == -10001){ 
+	if (depth == 1 || thisBoardScore == 10000 || thisBoardScore == -10000 || thisBoardScore == -10001){
 		return thisBoardScore;
 	}
 	
@@ -952,7 +953,11 @@ void printError(int error){
 PossibleMove* minimax(){
 	LinkedList* allPossibleMoves = Board_getPossibleMoves(&board, turn);
 	if (!allPossibleMoves){
+		printf("allPossibleMoves in minimax is NULL\n");
 		allocationFailed();
+	}
+	if (LinkedList_length(allPossibleMoves) == 0){
+		printf("allPossibleMoves is empty!!!\n");
 	}
 	
 	int bestScore = INT_MIN;
@@ -981,6 +986,7 @@ PossibleMove* minimax(){
 			}
 			bestMove = PossibleMove_clone(currentMove);
 			if (!bestMove){
+				LinkedList_free(allPossibleMoves);
 				return NULL;
 			}
 		}
@@ -993,8 +999,11 @@ PossibleMove* minimax(){
  * The computer turn procedure.
  */
 void computerTurn(){
+	printf("Entered computerTurn!\n");
+	
 	PossibleMove* bestMove = minimax();
 	if (!bestMove){
+		printf("bestMove in computerTurn is NULL\n");
 		allocationFailed();
 	}
 	
@@ -1016,7 +1025,7 @@ void humanTurnConsole(int player){
 			printf("Enter game settings:\n");
 		}
 		if (state == GAME){
-			printf(player == BLACK? "Black": "White");
+			printf((player == BLACK)? "Black": "White");
 			printf(" player - enter your move:\n");
 		}
 		char command[64];
@@ -1035,12 +1044,25 @@ void performPromotion(char piece){
 	chosePromotionMove = 0;
 }
 
+void resetToDefaults(){
+	Board_init(&board); 
+	first = WHITE; 
+	gameMode = TWO_PLAYERS_MODE; 
+	maxRecursionDepth = 1; 
+	player1 = WHITE;
+	turn = first;
+	isInCheck = 0; 
+	gameEnded = 0; 
+	chosePromotionMove = 0;
+	modifyingPiece = '_';	
+}
+
 void executeButton(int buttonId){
 	if (buttonId >= 200){
 		char path[12];
 		sprintf(path, "slot%02d.xml", buttonId-200);
 		loadGame(path);
-		setScreenToGame();
+		setScreenToPlayerSettings();
 		return;
 	}
 	if (buttonId >= 100){
@@ -1059,22 +1081,19 @@ void executeButton(int buttonId){
 			setScreenToPlayerSettings();
 			break;
 		case RETURN_TO_PLAYER_SETTINGS: setScreenToPlayerSettings(); break;
-		case NEW: 
-			setScreenToPlayerSettings(); 
-			Board_init(&board); 
-			first=WHITE; 
-			gameMode = TWO_PLAYERS_MODE; 
-			maxRecursionDepth = 1; 
-			player1 = WHITE; 
-			isInCheck = 0; 
-			gameEnded = 0; 
-			chosePromotionMove = 0;
-			modifyingPiece = '_';
+		case NEW:
+			resetToDefaults();
+			setScreenToPlayerSettings();
 			break;
-		case LOAD: setScreenToSaveLoad(0); break;
+		case LOAD: setScreenToSaveLoad(0); gameEnded = 0; break;
 		case SAVE: setScreenToSaveLoad(1); break;
 		case RETURN_TO_GAME: setScreenToGame(); break;
-		case HINT: setSelectedMoveToBest(); break;
+		case HINT:
+			if (gameEnded){
+				break;
+			}
+			setSelectedMoveToBest(); 
+			break;
 		case QUIT: exit(0); break;
 		case CLEAR: Board_clear(copyOfMainBoard); PieceCounter_reset(copyOfMainPieceCounter); settingInvalidPiece = 0; break;
 		case BLACK_KING: kingIsMissing = 0; modifyingPiece = Board_BLACK_KING; break;
@@ -1099,7 +1118,7 @@ void executeButton(int buttonId){
 		case PROMOTE_TO_WHITE_ROOK: performPromotion(Board_WHITE_ROOK);  break;
 		case PROMOTE_TO_WHITE_KNIGHT: performPromotion(Board_WHITE_KNIGHT);  break;
 		case SET_BOARD: setScreenToBoardSettings(); break;
-		case PLAY: setScreenToGame(); break;
+		case PLAY: setScreenToGame(); GUI_paint(); break;
 		case AI_SETTINGS: setScreenToAISettings(); break;
 		case FINISHED_SETTING_BOARD:
 			settingInvalidPiece = 0;
@@ -1176,6 +1195,7 @@ void rightMouseButtonUp(SDL_Event e){
 		PossibleMoveList_free(movesOfSelectedPiece);
 		movesOfSelectedPiece = NULL;
 		selectedX = 0;
+		isInCheck = 0;
 		if (!chosePromotionMove){
 			turn = !turn;
 		}
@@ -1201,7 +1221,14 @@ void humanTurnGUI(int player){
 						button = getButtonByMousePosition(e.button.x, e.button.y);
 						radio = getRadioByMousePosition(e.button.x, e.button.y);
 						if (button){
-							executeButton(button->id);
+							if (button->id == PLAY){
+								executeButton(button->id);
+								printf("Pressed Play!\n");
+								return;
+							}
+							else{
+								executeButton(button->id);
+							}
 						}
 						else if (radio){
 							Radio_select(radio, 1);
@@ -1276,6 +1303,7 @@ void humanTurnGUI(int player){
  * The human turn procedure
  */
 void humanTurn(int player){
+	printf("humanTurn recieves as argument: %d\n", player);
 	if (displayMode == CONSOLE){
 		humanTurnConsole(player);
 	}
@@ -1340,8 +1368,11 @@ int main(int argc, char* argv[]){
 			if (gameMode == CONSOLE){
 				break;
 			}
+			else{
+				gameEnded = 1;
+			}
 		}
-		if (turn != player1 && gameMode == SINGLE_PLAYER_MODE){
+		if (turn != player1 && gameMode == SINGLE_PLAYER_MODE && !gameEnded){
 			computerTurn();
 		}
 		else{
