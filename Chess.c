@@ -602,6 +602,28 @@ int getDepth(){
 	return (maxRecursionDepth == BEST)? computeBestDepth(): maxRecursionDepth;
 }
 
+PossibleMove* getBestMove(){
+	LinkedList* allPossibleMoves = Board_getPossibleMoves(&board, turn);
+	if (!allPossibleMoves){
+		return NULL;
+	}
+	int depth = getDepth();
+	int bestScore = INT_MIN;
+	PossibleMove* bestMove;
+	Iterator iterator;
+	Iterator_init(&iterator, allPossibleMoves);
+	while(Iterator_hasNext(&iterator)){
+		PossibleMove* currentMove = (PossibleMove*)Iterator_next(&iterator);
+		int score = alphabeta(currentMove, depth, !turn, INT_MIN, INT_MAX);
+		if (score > bestScore || (score == bestScore && rand()%2)) {
+			bestScore = score;
+			bestMove = currentMove;
+		}
+	}
+	LinkedList_freeAllButOne(allPossibleMoves, bestMove);
+	return bestMove;
+}
+
 int setSelectedMoveToBest(){
 	if (movesOfSelectedPiece){
 		LinkedList_free(movesOfSelectedPiece);
@@ -610,27 +632,10 @@ int setSelectedMoveToBest(){
 	if (!movesOfSelectedPiece){
 		return -1;
 	}
-	LinkedList* allPossibleMoves = Board_getPossibleMoves(&board, turn);
-	if (!allPossibleMoves){
+	PossibleMove* bestMove = getBestMove();
+	if (!bestMove){
 		return -1;
 	}
-	
-	int depth = getDepth();
-	int bestScore = INT_MIN;
-	Iterator iterator;
-	Iterator_init(&iterator, allPossibleMoves);
-	while(Iterator_hasNext(&iterator)){
-		PossibleMove* currentMove = (PossibleMove*)Iterator_next(&iterator);
-		int score = alphabeta(currentMove, depth, !turn, INT_MIN, INT_MAX);
-		if (score > bestScore || (score == bestScore && rand()%2)) {
-			LinkedList_removeAll(movesOfSelectedPiece);
-			LinkedList_add(movesOfSelectedPiece, currentMove);
-			bestScore = score;
-		}
-	}
-	PossibleMove* bestMove = (PossibleMove*)LinkedList_first(movesOfSelectedPiece);
-	LinkedList_freeAllButOne(allPossibleMoves, bestMove);
-	
 	selectedX = bestMove->fromX;
 	selectedY = bestMove->fromY;
 	return 0;
@@ -959,52 +964,12 @@ void printError(int error){
 	}
 }
 
-PossibleMove* minimax(){
-	LinkedList* allPossibleMoves = Board_getPossibleMoves(&board, turn);
-	if (!allPossibleMoves){
-		printf("allPossibleMoves in minimax is NULL\n");
-		allocationFailed();
-	}
-	if (LinkedList_length(allPossibleMoves) == 0){
-		printf("allPossibleMoves is empty!!!\n");
-	}
-	
-	int bestScore = INT_MIN;
-	PossibleMove* bestMove = NULL;
-	int depth = getDepth();
-	
-	Iterator iterator;
-	Iterator_init(&iterator, allPossibleMoves);
-	while(Iterator_hasNext(&iterator)){
-		PossibleMove* currentMove = (PossibleMove*)Iterator_next(&iterator);
-		int score = alphabeta(currentMove, depth, !turn, INT_MIN, INT_MAX);
-		printf("evaluated a single move\n");
-		
-		if (score == -10001){ //allocation error occurred in alphabeta
-			PossibleMoveList_free(allPossibleMoves);
-			return NULL;
-		}
-		if (score > bestScore || (score == bestScore && rand()%2)){
-			bestScore = score;
-			bestMove = currentMove;
-		}
-	}
-	bestMove = PossibleMove_clone(bestMove);
-	if (!bestMove){
-		LinkedList_free(allPossibleMoves);
-		return NULL;
-	}
-	LinkedList_free(allPossibleMoves);
-	return bestMove;
-}
-
 /*
  * The computer turn procedure.
  */
 void computerTurn(){
-	PossibleMove* bestMove = minimax();
+	PossibleMove* bestMove = getBestMove();
 	if (!bestMove){
-		printf("bestMove in computerTurn is NULL\n");
 		allocationFailed();
 	}
 	
