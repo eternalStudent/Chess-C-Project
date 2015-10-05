@@ -3,6 +3,8 @@
 /*
  * Initializes the global variables.
  */
+ 
+int callCount = 0; 
   
 void initialize(){
 	Board_init(&board);
@@ -47,6 +49,7 @@ void allocationFailed(){
  * The minimax AI algorithm.
  */
 int alphabeta(PossibleMove* possibleMove, int depth, int player, int alpha, int beta){
+	callCount++;
 	int (*evaluationFunction)(Board*, int, int) = (maxRecursionDepth == BEST)?
 				&Board_getBetterScore:
 				&Board_getScore;
@@ -91,9 +94,9 @@ int alphabeta(PossibleMove* possibleMove, int depth, int player, int alpha, int 
 			extremum = score;
 		}
 		//game over - no need to evaluate further moves
-		if (extremum == 10000 || extremum == -10000){
-			break;
-		}
+		// if (extremum == 10000 || extremum == -10000){
+			// break;
+		// }
 		//alpha-beta pruning
 		if (turn == player){
 			alpha = (score > alpha)? score: alpha;
@@ -603,6 +606,7 @@ int getDepth(){
 }
 
 PossibleMove* getBestMove(){
+	callCount = 0;
 	LinkedList* allPossibleMoves = Board_getPossibleMoves(&board, turn);
 	if (!allPossibleMoves){
 		return NULL;
@@ -620,6 +624,7 @@ PossibleMove* getBestMove(){
 			bestMove = currentMove;
 		}
 	}
+	printf("evaluated %d boards\n", callCount);
 	LinkedList_freeAllButOne(allPossibleMoves, bestMove);
 	return bestMove;
 }
@@ -638,6 +643,8 @@ int setSelectedMoveToBest(){
 	}
 	selectedX = bestMove->fromX;
 	selectedY = bestMove->fromY;
+	LinkedList_add(movesOfSelectedPiece, bestMove);
+	
 	return 0;
 }
 
@@ -1035,7 +1042,7 @@ void executeButton(int buttonId){
 		char path[12];
 		sprintf(path, "slot%02d.xml", buttonId-100);
 		saveGame(path);
-		setScreenToGame();
+		setScreenToGame(0);
 		return;
 	}
 	switch(buttonId){
@@ -1051,9 +1058,9 @@ void executeButton(int buttonId){
 			resetToDefaults();
 			setScreenToPlayerSettings();
 			break;
-		case LOAD: setScreenToSaveLoad(0); gameEnded = 0; break;
+		case LOAD: setScreenToSaveLoad(0); gameEnded = 0; isInCheck = 0; break;
 		case SAVE: setScreenToSaveLoad(1); break;
-		case RETURN_TO_GAME: setScreenToGame(); break;
+		case RETURN_TO_GAME: setScreenToGame(0); break;
 		case HINT:
 			if (gameEnded){
 				break;
@@ -1085,7 +1092,7 @@ void executeButton(int buttonId){
 		case PROMOTE_TO_WHITE_ROOK: performPromotion(Board_WHITE_ROOK);  break;
 		case PROMOTE_TO_WHITE_KNIGHT: performPromotion(Board_WHITE_KNIGHT);  break;
 		case SET_BOARD: setScreenToBoardSettings(); break;
-		case PLAY: setScreenToGame(); GUI_paint(); break;
+		case PLAY: setScreenToGame(1); GUI_paint(); break;
 		case AI_SETTINGS: setScreenToAISettings(); break;
 		case FINISHED_SETTING_BOARD:
 			settingInvalidPiece = 0;
@@ -1170,6 +1177,36 @@ void rightMouseButtonUp(SDL_Event e){
 	PossibleMove_free(move);
 }
 
+void modifyPieceOnSettingsBoard(SDL_Event e){
+	int modifiedTileX;
+	int modifiedTileY;
+	convertPixelsToBoardPosition(e, &modifiedTileX, &modifiedTileY);
+	char modifiedPiece = Board_getPiece(copyOfMainBoard, modifiedTileX, modifiedTileY);
+
+	if (modifyingPiece != Board_EMPTY){ //adding a piece
+		if (PieceCounter_isAtMax(copyOfMainPieceCounter, modifyingPiece, modifiedTileX, modifiedTileY) || 
+			(pieceIsPawn(modifiedTileX, modifiedTileY) &&
+			Board_isFurthestRowForPlayer(Board_getColor(copyOfMainBoard, modifiedTileX, modifiedTileY), modifiedTileY))){
+			settingInvalidPiece = 1;
+		}
+		
+		else{ 
+			settingInvalidPiece = 0;
+			Board_setPiece(copyOfMainBoard, modifiedTileX, modifiedTileY, modifyingPiece);
+			PieceCounter_update(copyOfMainPieceCounter, modifyingPiece, 1, modifiedTileX, modifiedTileY);
+			Board_updateKingPosition(copyOfMainBoard, modifiedTileX, modifiedTileY);
+		}
+	}
+
+	else{ //removing a piece
+		settingInvalidPiece = 0;
+		Board_setPiece(copyOfMainBoard, modifiedTileX, modifiedTileY, modifyingPiece);
+		PieceCounter_update(copyOfMainPieceCounter, modifiedPiece, -1, modifiedTileX, modifiedTileY);
+	}
+
+	modifyingPiece = '_';
+}
+
 void humanTurnGUI(int player){
 	Button* button;
 	Radio* radio;
@@ -1190,7 +1227,6 @@ void humanTurnGUI(int player){
 						if (button){
 							if (button->id == PLAY){
 								executeButton(button->id);
-								printf("Pressed Play!\n");
 								return;
 							}
 							else{
@@ -1200,39 +1236,8 @@ void humanTurnGUI(int player){
 						else if (radio){
 							Radio_select(radio, 1);
 						}
-						else if (modifyingPiece != '_'){
-							if(copyOfMainBoard){ // board settings screen
-								int modifiedTileX;
-								int modifiedTileY;
-								convertPixelsToBoardPosition(e, &modifiedTileX, &modifiedTileY);
-								char modifiedPiece = Board_getPiece(copyOfMainBoard, modifiedTileX, modifiedTileY);
-								
-								if (modifyingPiece != Board_EMPTY){ //adding a piece
-									if (PieceCounter_isAtMax(copyOfMainPieceCounter, modifyingPiece, modifiedTileX, modifiedTileY) || 
-										(pieceIsPawn(modifiedTileX, modifiedTileY) &&
-										Board_isFurthestRowForPlayer(Board_getColor(copyOfMainBoard, modifiedTileX, modifiedTileY), modifiedTileY))){
-										settingInvalidPiece = 1;
-									}
-									
-									else{ 
-										settingInvalidPiece = 0;
-										Board_setPiece(copyOfMainBoard, modifiedTileX, modifiedTileY, modifyingPiece);
-										PieceCounter_update(copyOfMainPieceCounter, modifyingPiece, 1, modifiedTileX, modifiedTileY);
-									}
-								}
-								
-								else{ //removing a piece
-									settingInvalidPiece = 0;
-									Board_setPiece(copyOfMainBoard, modifiedTileX, modifiedTileY, modifyingPiece);
-									PieceCounter_update(copyOfMainPieceCounter, modifiedPiece, -1, modifiedTileX, modifiedTileY);
-								}
-								
-								modifyingPiece = '_';
-							}
-							else{ // promotion during game
-								Board_setPiece(&board, lastDestinationTileX, lastDestinationTileY, modifyingPiece);
-								modifyingPiece = '_';
-							}
+						else if (modifyingPiece != '_' && copyOfMainBoard){
+							modifyPieceOnSettingsBoard(e);
 						}
 						else{
 							leftMouseButtonUp(e);
@@ -1270,7 +1275,6 @@ void humanTurnGUI(int player){
  * The human turn procedure
  */
 void humanTurn(int player){
-	printf("humanTurn recieves as argument: %d\n", player);
 	if (displayMode == CONSOLE){
 		humanTurnConsole(player);
 	}

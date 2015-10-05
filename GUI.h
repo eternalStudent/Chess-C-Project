@@ -126,15 +126,13 @@ void setAllButtonsToNormal();
 
 int setScreenToPlayerSettings();
 
-int setScreenToGame();
+int setScreenToGame(short calledAtBeginningOfGame);
 
 int setScreenToMainMenu();
 
 int setScreenToBoardSettings();
 
 int setScreenToAISettings();
-
-int setScreenToGame();
 
 int setScreenToSaveLoad(short save);
 

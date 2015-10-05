@@ -437,7 +437,7 @@ static int boardSettingsHeaderPanel_draw(Panel* panel){
 	}
 	
 	if (kingIsMissing){
-		if (drawImageByPath("Textures/kingMissingError.bmp", panel->surface, 2.5*TILE_SIZE, 1.2*TILE_SIZE)){
+		if (drawImageByPath("Textures/kingMissingError.bmp", panel->surface, 3.2*TILE_SIZE, 1.2*TILE_SIZE)){
 			return 1;
 		}
 	}
@@ -523,7 +523,7 @@ static int announcementsPanel_draw(Panel* panel){
 		}
 	}
 		
-	if (isInCheck){
+	if (isInCheck && !gameEnded){
 		if (drawImageByPath("Textures/check.bmp", panel->surface, 5.2*TILE_SIZE, 0.5*TILE_SIZE) != 0){
 			return 1;
 		}
@@ -982,10 +982,14 @@ int setScreenToMainMenu(){
 	return 0;
 }
 
-int setScreenToGame(){
+int setScreenToGame(short calledAtBeginningOfGame){
 	prepareWindowForNewScreen();
-	turn = first;
+	selectedX = 0;
 	
+	if (calledAtBeginningOfGame){
+		turn = first;
+	}
+
 	SDL_Rect announcementsRect = {0, 10*TILE_SIZE, 12*TILE_SIZE, 2*TILE_SIZE};
 	Panel* announcementsPanel = Panel_new(window->surface, announcementsRect, &announcementsPanel_draw);
 	if(!announcementsPanel){
@@ -1082,8 +1086,8 @@ int setScreenToGame(){
 	
 	LinkedList_add(window->children, boardNumbersPanel);
 	LinkedList_add(window->children, buttonsPanel);
-	LinkedList_add(window->children, boardPanel);
 	LinkedList_add(window->children, announcementsPanel);
+	LinkedList_add(window->children, boardPanel);
 	LinkedList_add(window->children, promotionPanel);
 	return 0;
 }
@@ -1117,7 +1121,6 @@ int setScreenToAISettings(){
 		SDL_Rect pos = {24+3*TILE_SIZE, i*24+TILE_SIZE, 48, 24};
 		Radio* difficultyRadio = Radio_new("Textures/difficultyLabels.bmp", AISettingsRadiosPanel, crop, pos, i);
 		if (!difficultyRadio){
-			RadioGroup_free(difficultyRadioGroup);
 			return 1;
 		}
 		RadioGroup_add(difficultyRadioGroup, difficultyRadio);
@@ -1139,8 +1142,6 @@ int setScreenToAISettings(){
 		SDL_Rect pos = {24+8.5*TILE_SIZE, i*24+TILE_SIZE, 48, 24};
 		Radio* AIColorRadio = Radio_new("Textures/nextPlayerLabels.bmp", AISettingsRadiosPanel, crop, pos, !i);
 		if (!AIColorRadio){
-			RadioGroup_free(difficultyRadioGroup);
-			RadioGroup_free(AIColorRadioGroup);
 			return 1;
 		}
 		RadioGroup_add(AIColorRadioGroup, AIColorRadio);
@@ -1272,9 +1273,10 @@ int setScreenToBoardSettings(){
 	LinkedList_add(piecesPanel->children, finishedButton);
 	LinkedList_add(window->buttons, finishedButton);
 	
+	LinkedList_add(window->children, headerPanel);
 	LinkedList_add(window->children, boardPanel);
 	LinkedList_add(window->children, piecesPanel);
-	LinkedList_add(window->children, headerPanel);
+	
 	
 	return 0;
 }
@@ -1445,7 +1447,8 @@ static void Window_free(){
 		LinkedList_free(movesOfSelectedPiece);
 	}
 	
-	LinkedList_free(window->buttons);
+	LinkedList_removeAll(window->buttons);
+	free(window->buttons);
 	LinkedList_free(window->radios);
 	free(window);
 	SDL_Quit();

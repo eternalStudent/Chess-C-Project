@@ -366,10 +366,14 @@ int Board_getBetterScore(Board* board, int scoredForPlayer, int nextPlayer){
 							LinkedList_length(playerMoves):
 							LinkedList_length(otherPlayerMoves);
 	if (Board_isInCheck(board, nextPlayer) && !nextPlayerCanMove){
+		LinkedList_free(playerMoves);
+		LinkedList_free(otherPlayerMoves);
 		return scoredForPlayer == nextPlayer? -10000: 10000;
 	}
 	//tie
 	if (!nextPlayerCanMove){
+		LinkedList_free(playerMoves);
+		LinkedList_free(otherPlayerMoves);
 		return 0;
 	}
 	//otherwise
@@ -489,6 +493,8 @@ static int canBeCapturedByABishopRookOrQueen(Board* board, int player){
 			for (int dist = 1; dist <= 7; dist++){
 				int x = board->kingX[player]+dist*sideward;
 				int y = board->kingY[player]+dist*forward;
+				
+				
 				if (!Board_isInRange(x, y)){
 					break;
 				}
@@ -503,15 +509,23 @@ static int canBeCapturedByABishopRookOrQueen(Board* board, int player){
 					toupper(Board_getPiece(board, x, y)) != Board_BLACK_BISHOP){
 					break;
 				}
+				
 				if (toupper(Board_getPiece(board, x, y)) == Board_BLACK_QUEEN){
 					return 1;
 				}
-				if ((forward == 0 || sideward == 0) 
-						&& toupper(Board_getPiece(board, x, y)) == Board_BLACK_ROOK){
-					return 1;
+				
+				if (toupper(Board_getPiece(board, x, y)) == Board_BLACK_ROOK){
+					if (forward == 0 || sideward == 0){
+						return 1;
+					}
+					break;
 				}
-				if ((sideward != 0 && forward != 0) && toupper(Board_getPiece(board, x, y)) == Board_BLACK_BISHOP){
-					return 1;
+				
+				if (toupper(Board_getPiece(board, x, y)) == Board_BLACK_BISHOP){
+					if (sideward != 0 && forward != 0){
+						return 1;
+					}
+					break;
 				}
 			}
 		}
@@ -539,7 +553,7 @@ static int canBeCapturedByAKing(Board* board){
  *
  * @return: 1 if the player's king can be captured by an enemy piece, 0 otherwise
  */
-int Board_isInCheck(Board* board, int player){
+int Board_isInCheck(Board* board, int player){	
 	return canBeCapturedByAPawn(board, player)
 		|| canBeCapturedByAKnight(board, player)
 		|| canBeCapturedByABishopRookOrQueen(board, player)
