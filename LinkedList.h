@@ -27,6 +27,8 @@ int LinkedList_length(LinkedList* list);
 
 void* LinkedList_first(LinkedList* list);
 
+void* LinkedList_last(LinkedList* list);
+
 void* LinkedList_second(LinkedList* list);
 
 void LinkedList_removeAllAndFree(LinkedList* list);

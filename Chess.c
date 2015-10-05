@@ -3,8 +3,6 @@
 /*
  * Initializes the global variables.
  */
- 
-int callCount = 0; 
   
 void initialize(){
 	Board_init(&board);
@@ -49,7 +47,6 @@ void allocationFailed(){
  * The minimax AI algorithm.
  */
 int alphabeta(PossibleMove* possibleMove, int depth, int player, int alpha, int beta){
-	callCount++;
 	int (*evaluationFunction)(Board*, int, int) = (maxRecursionDepth == BEST)?
 				&Board_getBetterScore:
 				&Board_getScore;
@@ -606,7 +603,6 @@ int getDepth(){
 }
 
 PossibleMove* getBestMove(){
-	callCount = 0;
 	LinkedList* allPossibleMoves = Board_getPossibleMoves(&board, turn);
 	if (!allPossibleMoves){
 		return NULL;
@@ -624,7 +620,6 @@ PossibleMove* getBestMove(){
 			bestMove = currentMove;
 		}
 	}
-	printf("evaluated %d boards\n", callCount);
 	LinkedList_freeAllButOne(allPossibleMoves, bestMove);
 	return bestMove;
 }

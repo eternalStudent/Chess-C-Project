@@ -94,12 +94,14 @@ typedef struct Radio{
 	SDL_Rect pos;
 	SDL_Rect absolutePos;
 	struct RadioGroup* group;
+	short hidden;
 } Radio;
 
 typedef struct RadioGroup{
 	LinkedList* radios;
 	Radio* selected;
 	int* parameter;
+	short hidden;
 } RadioGroup;
 
 Board* copyOfMainBoard;

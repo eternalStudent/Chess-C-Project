@@ -142,6 +142,10 @@ static Button* Button_new(int id, Panel* parent, SDL_Rect rect, int y, const cha
 	button->normal = Rect_new(2*rect.w, y, rect.w, rect.h);
 	button->current = button->normal;
 	
+	if (LinkedList_add(window->buttons, button) || LinkedList_add(parent->children, button)){
+		return NULL;
+	}
+	
 	return button;
 }
 
@@ -195,6 +199,7 @@ Radio* Radio_new(const char* path, Panel* parent, SDL_Rect crop, SDL_Rect pos, i
 	}
 	radio->absolutePos = findAbsoluteRectPosition(pos, parent);
 	radio->group = NULL;
+	radio->hidden = 0;
 	LinkedList_add(window->radios, radio);
 	return radio;
 }
@@ -236,6 +241,17 @@ void Radio_free(void* data){
 	free(radio);
 }
 
+void RadioGroup_changeVisibility(RadioGroup* group, short hide){
+	group->hidden = hide;
+	Iterator iterator;
+	Iterator_init(&iterator, group->radios);
+	while(Iterator_hasNext(&iterator)){
+		Radio* radio = (Radio*)Iterator_next(&iterator);
+		radio->hidden = hide;
+	}
+}
+
+
 RadioGroup* RadioGroup_new(int* parameter){
 	RadioGroup* group = (RadioGroup*)malloc(sizeof(RadioGroup));
 	if (!group){
@@ -247,6 +263,7 @@ RadioGroup* RadioGroup_new(int* parameter){
 		return NULL;
 	}
 	group->selected = NULL;
+	group->hidden = 0;
 	group->parameter = parameter;
 	return group;
 }
@@ -264,6 +281,9 @@ int RadioGroup_getValue(RadioGroup* group){
 }
 
 int RadioGroup_draw(RadioGroup* group){
+	if (group->hidden){
+		return 0;
+	}
 	Iterator iterator;
 	Iterator_init(&iterator, group->radios);
 	while(Iterator_hasNext(&iterator)){
@@ -422,7 +442,7 @@ static int boardSettingsHeaderPanel_draw(Panel* panel){
 		return 1;
 	}
 	
-	if (drawImageByPath("Textures/boardSettingsHeader.bmp", panel->surface, 4.2*TILE_SIZE, 0)){
+	if (drawImageByPath("Textures/boardSettingsHeader.bmp", panel->surface, 4.2*TILE_SIZE, 0.2*TILE_SIZE)){
 		return 1;
 	}
 	
@@ -731,11 +751,11 @@ int playerSettingsHeader_draw(Panel* panel){
 		return 1;
 	}	
 	
-	if (drawImageByPath("Textures/playerSettingsIcon.bmp", panel->surface, 4.2*TILE_SIZE, 1.5*TILE_SIZE)){
+	if (drawImageByPath("Textures/playerSettingsIcon.bmp", panel->surface, 4.2*TILE_SIZE, 2*TILE_SIZE)){
 		return 1;
 	}
 	
-	if(drawImageByPath("Textures/playerSettingsHeader.bmp", panel->surface, 3*TILE_SIZE ,0) != 0){
+	if(drawImageByPath("Textures/playerSettingsHeader.bmp", panel->surface, 3*TILE_SIZE ,0.5*TILE_SIZE) != 0){
 		return 1;
 	}
 	
@@ -751,12 +771,25 @@ int playerSettingsRadiosPanel_draw (Panel* panel){
 		return 1;
 	}	
 	
-	if(drawImageByPath("Textures/gameModeHeader.bmp", panel->surface, 1.8*TILE_SIZE, 0)){
+	if (drawImageByPath("Textures/gameModeHeader.bmp", panel->surface, 1.8*TILE_SIZE, 0)){
 		return 1;
 	}
 	
-	if(drawImageByPath("Textures/nextPlayerHeader.bmp", panel->surface, 7.8*TILE_SIZE, 0)){
+	if (drawImageByPath("Textures/nextPlayerHeader.bmp", panel->surface, 7.8*TILE_SIZE, 0)){
 		return 1;
+	}
+	
+	if (gameMode == TWO_PLAYERS_MODE){
+		if(drawImageByPath("Textures/depthForHintsHeader.bmp", panel->surface, 3.7*TILE_SIZE, 1.8*TILE_SIZE)){
+			return 1;
+		}
+		RadioGroup* depthForHintsRadioGroup = LinkedList_last(panel->children);
+		RadioGroup_changeVisibility(depthForHintsRadioGroup, 0);
+	}
+	
+	if (gameMode == SINGLE_PLAYER_MODE){
+		RadioGroup* depthForHintsRadioGroup = LinkedList_last(panel->children);
+		RadioGroup_changeVisibility(depthForHintsRadioGroup, 1);
 	}
 	
 	Iterator iterator;
@@ -969,14 +1002,6 @@ int setScreenToMainMenu(){
 		if (!button){
 			return 1;
 		}
-		if (LinkedList_add(mainMenuPanel->children, button)){
-			Button_free(button);
-			return 1;
-		}
-		if (LinkedList_add(window->buttons, button)){
-			Button_free(button);
-			return 1;
-		}
 	}
 	
 	return 0;
@@ -996,19 +1021,17 @@ int setScreenToGame(short calledAtBeginningOfGame){
 		return 1;
 	}
 	
-	SDL_Rect instructionsRect = {10.2*TILE_SIZE, 0.1*TILE_SIZE, 96, 96};
-	Button* instructionsButton = Button_new(INSTRUCTIONS, announcementsPanel, instructionsRect, 0, "Textures/instructionsButton.bmp");
-	if (!instructionsButton){
-		return 1;
-	}
 	announcementsPanel->children = LinkedList_new(&Button_free);
 	if (!announcementsPanel->children){
 		return 1;
 	}
 	
-	LinkedList_add(announcementsPanel->children, instructionsButton);
-	LinkedList_add(window->buttons, instructionsButton);
-	
+	SDL_Rect instructionsRect = {10.2*TILE_SIZE, 0.1*TILE_SIZE, 96, 96};
+	Button* instructionsButton = Button_new(INSTRUCTIONS, announcementsPanel, instructionsRect, 0, "Textures/instructionsButton.bmp");
+	if (!instructionsButton){
+		return 1;
+	}
+
 	SDL_Rect boardRect = {2*TILE_SIZE, 2*TILE_SIZE, 8*TILE_SIZE, 8*TILE_SIZE};
 	Panel* boardPanel = Panel_new(window->surface, boardRect, &gameBoardPanel_draw);
 	if(!boardPanel){
@@ -1039,8 +1062,6 @@ int setScreenToGame(short calledAtBeginningOfGame){
 		if(!button){
 			return 1;
 		}
-		LinkedList_add(buttonsPanel->children, button);
-		LinkedList_add(window->buttons, button);
 	}
 	
 	SDL_Rect promotionRect = {11*TILE_SIZE, 2*TILE_SIZE, TILE_SIZE, 4*TILE_SIZE};
@@ -1076,12 +1097,9 @@ int setScreenToGame(short calledAtBeginningOfGame){
 			return 1;
 		}
 		
-		// if ((turn == WHITE && i<4) || (turn == BLACK && i>3)){
-			// button->hidden = 1;
-		// }
-		
-		LinkedList_add(promotionPanel->children, button);
-		LinkedList_add(window->buttons, button);
+		if ((turn == WHITE && i<4) || (turn == BLACK && i>3)){
+			button->hidden = 1;
+		}
 	}
 	
 	LinkedList_add(window->children, boardNumbersPanel);
@@ -1094,6 +1112,7 @@ int setScreenToGame(short calledAtBeginningOfGame){
 
 int setScreenToAISettings(){
 	prepareWindowForNewScreen();
+	maxRecursionDepth = 1;
 	
 	SDL_Rect AISettingsHeaderPanelRect = {0, 0, 12*TILE_SIZE, TILE_SIZE}; 
 	Panel* AISettingsHeaderPanel = Panel_new(window->surface, AISettingsHeaderPanelRect, &AISettingsHeaderPanel_draw);
@@ -1175,13 +1194,7 @@ int setScreenToAISettings(){
 	if (!letsPlayButton){
 		return 1;
 	}
-	
-	LinkedList_add(AISettingsButtonsPanel->children, cancelButton);
-	LinkedList_add(AISettingsButtonsPanel->children, letsPlayButton);
-	
-	LinkedList_add(window->buttons, cancelButton);
-	LinkedList_add(window->buttons, letsPlayButton);
-	
+		
 	LinkedList_add(window->children, AISettingsHeaderPanel);
 	LinkedList_add(window->children, AISettingsRadiosPanel);
 	LinkedList_add(window->children, AISettingsButtonsPanel);
@@ -1206,10 +1219,7 @@ int setScreenToInstructions(){
 		return 1;
 	}
 
-	LinkedList_add(instructionsPanel->children, gotItButton);
-	LinkedList_add(window->buttons, gotItButton);
-	LinkedList_add(window->children, instructionsPanel);
-	
+	LinkedList_add(instructionsPanel->children, gotItButton);	
 	return 0;
 }
 
@@ -1253,8 +1263,6 @@ int setScreenToBoardSettings(){
 		if (!button){
 			return 1;
 		}
-		LinkedList_add(piecesPanel->children, button);
-		LinkedList_add(window->buttons, button);
 	}
 	
 	SDL_Rect cancelRect = {8, TILE_SIZE, 146, 40};
@@ -1262,21 +1270,16 @@ int setScreenToBoardSettings(){
 	if(!cancelButton){
 		return 1;
 	}
-	LinkedList_add(piecesPanel->children, cancelButton);
-	LinkedList_add(window->buttons, cancelButton);
 	
 	SDL_Rect finishedRect = {9.5*TILE_SIZE, TILE_SIZE, 146, 40};
 	Button* finishedButton = Button_new(FINISHED_SETTING_BOARD, piecesPanel, finishedRect, 200, "Textures/gameButtons.bmp");
 	if(!finishedButton){
 		return 1;
 	}
-	LinkedList_add(piecesPanel->children, finishedButton);
-	LinkedList_add(window->buttons, finishedButton);
 	
 	LinkedList_add(window->children, headerPanel);
 	LinkedList_add(window->children, boardPanel);
 	LinkedList_add(window->children, piecesPanel);
-	
 	
 	return 0;
 }
@@ -1285,7 +1288,7 @@ int setScreenToBoardSettings(){
 int setScreenToPlayerSettings(){
 	prepareWindowForNewScreen();
 	
-	SDL_Rect playerSettingsRadiosRect = {0, 5*TILE_SIZE, 12*TILE_SIZE, 4.3*TILE_SIZE};
+	SDL_Rect playerSettingsRadiosRect = {0, 5*TILE_SIZE, 12*TILE_SIZE, 4.5*TILE_SIZE};
 	Panel* playerSettingsRadiosPanel = Panel_new(window->surface, playerSettingsRadiosRect, &playerSettingsRadiosPanel_draw);
 	if (!playerSettingsRadiosPanel){
 		return 1;
@@ -1342,22 +1345,31 @@ int setScreenToPlayerSettings(){
 	LinkedList_add(playerSettingsRadiosPanel->children, nextPlayerRadioGroup);
 	
 	
-	SDL_Rect playerSettingsHeaderRect = {0, 0, 12*TILE_SIZE, 3.5*TILE_SIZE};
+	SDL_Rect playerSettingsHeaderRect = {0, 0, 12*TILE_SIZE, 4*TILE_SIZE};
 	Panel* playerSettingsHeaderPanel = Panel_new(window->surface, playerSettingsHeaderRect, &playerSettingsHeader_draw);
 	if(!playerSettingsHeaderPanel){
 		return 1;
 	}
-	
-	
-	
 	
 	SDL_Rect playerSettingsButtonsRect = {0, 10*TILE_SIZE, 12*TILE_SIZE, 2*TILE_SIZE};
 	Panel* playerSettingsButtonsPanel = Panel_new(window->surface, playerSettingsButtonsRect, &playerSettingsButtonsPanel_draw);
 	if (!playerSettingsButtonsPanel){
 		return 1;
 	}
+	
 	playerSettingsButtonsPanel->children = LinkedList_new(&Button_free);
 	if(!playerSettingsButtonsPanel->children){
+		return 1;
+	}
+	
+	SDL_Rect letsPlayOrAISettings_Rect = {8*TILE_SIZE, TILE_SIZE, 146, 40};
+	Button* AISettingsButton = Button_new(AI_SETTINGS, playerSettingsButtonsPanel, letsPlayOrAISettings_Rect, 240, "Textures/gameButtons.bmp");
+	if (!AISettingsButton){
+		return 1;
+	}
+	
+	Button* letsPlayButton = Button_new(PLAY, playerSettingsButtonsPanel, letsPlayOrAISettings_Rect, 280, "Textures/gameButtons.bmp");
+	if (!letsPlayButton){
 		return 1;
 	}
 	
@@ -1373,26 +1385,29 @@ int setScreenToPlayerSettings(){
 		return 1;
 	}
 	
-	SDL_Rect letsPlayOrAISettings_Rect = {8*TILE_SIZE, TILE_SIZE, 146, 40};
-	Button* AISettingsButton = Button_new(AI_SETTINGS, playerSettingsButtonsPanel, letsPlayOrAISettings_Rect, 240, "Textures/gameButtons.bmp");
-	if (!AISettingsButton){
+
+	
+	
+	RadioGroup* minimaxDepthForHintRadioGroup = RadioGroup_new(&maxRecursionDepth);
+	if(!minimaxDepthForHintRadioGroup){
 		return 1;
 	}
 	
-	Button* letsPlayButton = Button_new(PLAY, playerSettingsButtonsPanel, letsPlayOrAISettings_Rect, 280, "Textures/gameButtons.bmp");
-	if (!letsPlayButton){
-		return 1;
+	for (int i = 0; i <= 4; i++){
+		SDL_Rect crop = {0, i*24, 48, 24};
+		SDL_Rect pos = {24+5.5*TILE_SIZE, i*24+2.5*TILE_SIZE, 48, 24};
+		Radio* depthRadio = Radio_new("Textures/difficultyLabels.bmp", playerSettingsRadiosPanel, crop, pos, i);
+		if (!depthRadio){
+			return 1;
+		}
+		RadioGroup_add(minimaxDepthForHintRadioGroup, depthRadio);
+		if (i == maxRecursionDepth){
+			depthRadio->state = 1;
+			depthRadio->group->selected = depthRadio;
+		}
 	}
 	
-	LinkedList_add(playerSettingsButtonsPanel->children, AISettingsButton);
-	LinkedList_add(playerSettingsButtonsPanel->children, letsPlayButton);
-	LinkedList_add(playerSettingsButtonsPanel->children, cancelButton);	
-	LinkedList_add(playerSettingsButtonsPanel->children, setBoardButton);
-	
-	LinkedList_add(window->buttons, AISettingsButton);
-	LinkedList_add(window->buttons, letsPlayButton);
-	LinkedList_add(window->buttons, cancelButton);	
-	LinkedList_add(window->buttons, setBoardButton);
+	LinkedList_add(playerSettingsRadiosPanel->children, minimaxDepthForHintRadioGroup);	
 	
 	LinkedList_add(window->children, playerSettingsRadiosPanel);
 	LinkedList_add(window->children, playerSettingsButtonsPanel);
@@ -1426,8 +1441,6 @@ int setScreenToSaveLoad(short save){
 		if (!button){
 			return 1;
 		}
-		LinkedList_add(saveLoadPanel->children, button);
-		LinkedList_add(window->buttons, button);
 	}
 	
 	SDL_Rect pos = {311, 11*TILE_SIZE, 146, 40};
@@ -1436,8 +1449,6 @@ int setScreenToSaveLoad(short save){
 	if (!button){
 		return 1;
 	}
-	LinkedList_add(saveLoadPanel->children, button);
-	LinkedList_add(window->buttons, button);
 	return 0;
 }
 
@@ -1449,7 +1460,8 @@ static void Window_free(){
 	
 	LinkedList_removeAll(window->buttons);
 	free(window->buttons);
-	LinkedList_free(window->radios);
+	LinkedList_removeAll(window->radios);
+	free(window->radios);
 	free(window);
 	SDL_Quit();
 }
@@ -1475,7 +1487,7 @@ int GUI_init(){
 }
 
 int GUI_paint(){
-	// Clear window to BLACK
+	// Clear window to background white
 	if (SDL_FillRect(window->surface, 0, BACKGROUND_WHITE) != 0) {
 		printf("ERROR: failed to draw rect: %s\n", SDL_GetError());
 		return 1;
@@ -1501,7 +1513,6 @@ static int Rect_contains(SDL_Rect rect, int x, int y){
 }
 
 Button* getButtonByMousePosition(int x, int y){
-	//printf("first is %d\n turn is %d\n, player1 is %d\n \n", first, turn, player1);
 	Iterator iterator;
 	Iterator_init(&iterator, window->buttons);
 	while (Iterator_hasNext(&iterator)){
@@ -1514,12 +1525,11 @@ Button* getButtonByMousePosition(int x, int y){
 }
 
 Radio* getRadioByMousePosition(int x, int y){
-	//printf("first is %d\n turn is %d\n, player1 is %d\n \n", first, turn, player1);
 	Iterator iterator;
 	Iterator_init(&iterator, window->radios);
 	while (Iterator_hasNext(&iterator)){
 		Radio* radio = (Radio*)Iterator_next(&iterator);
-		if (Rect_contains(radio->absolutePos, x+24, y)){
+		if (Rect_contains(radio->absolutePos, x+24, y) && !(radio->hidden)){
 			return radio;
 		}
 	}

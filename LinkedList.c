@@ -120,6 +120,13 @@ void* LinkedList_first(LinkedList* list){
 }
 
 /*
+ * @return: the last element in the list
+ */
+void* LinkedList_last(LinkedList* list){
+	return list->last->data;                                                                      
+}
+
+/*
  * @return: the second element in the list
  */
 void* LinkedList_second(LinkedList* list){
