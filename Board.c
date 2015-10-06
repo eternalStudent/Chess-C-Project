@@ -617,7 +617,10 @@ static LinkedList* getPawnMoves(Board* board, int fromX, int fromY){
 						return NULL;
 					}
 					if (!Board_isInCheck(newMove1->board, player)){
-						LinkedList_add(possibleMoves, newMove1);
+						if(LinkedList_add(possibleMoves, newMove1)){
+							PossibleMoveList_free(possibleMoves);
+							return NULL;
+						}
 					}
 					else{
 						PossibleMove_free(newMove1);
@@ -631,7 +634,10 @@ static LinkedList* getPawnMoves(Board* board, int fromX, int fromY){
 					return NULL;
 				}
 				if (!Board_isInCheck(newMove2->board, player)){
-					LinkedList_add(possibleMoves, newMove2);
+					if(LinkedList_add(possibleMoves, newMove2)){
+						PossibleMoveList_free(possibleMoves);
+						return NULL;
+					}
 				}
 				else{
 					PossibleMove_free(newMove2);
@@ -646,7 +652,8 @@ static LinkedList* getPawnMoves(Board* board, int fromX, int fromY){
  * Adds a single possible move from (fromX, fromY) to (fromX+sideward, fromY+forward)
  * to (possibleMoves) if  this move is legal.
  *
- * @return: -1 if the given position is occupied or out of range, 
+ * @return: -1 if the given position is occupied or out of range,
+ *		    -2 if an allocation error occured
  *           0 otherwise
  */
 int addMoveIfLegal(LinkedList* possibleMoves, Board* board, 
@@ -670,7 +677,9 @@ int addMoveIfLegal(LinkedList* possibleMoves, Board* board,
 		return -2;
 	}
 	if (!Board_isInCheck(move->board, player)){
-		LinkedList_add(possibleMoves, move);
+		if(LinkedList_add(possibleMoves, move)){
+			return -2;
+		}
 	}
 	else {
 		PossibleMove_free(move);
@@ -770,6 +779,7 @@ static LinkedList* getCastlingMoves(Board* board, int x, int y){
 	int positionInRookMovementArray = (x == 1)? 0 : 1;
 	int clearPathExistsForKing = Board_clearAndSafeHorizontalPathExistsForKing(board, 5, kingDestX, y);
 	if (clearPathExistsForKing == -1){
+		PossibleMoveList_free(possibleMoves);
 		return NULL;
 	}
 	
@@ -778,9 +788,13 @@ static LinkedList* getCastlingMoves(Board* board, int x, int y){
 		&& board->hasRookEverMoved[player][positionInRookMovementArray] == 0){
 		PossibleMove* newCastlingMove = PossibleMove_new(x, y, 0, 0, 0, board);
 		if(!newCastlingMove){
+			PossibleMoveList_free(possibleMoves);
 			return NULL;
 		}
-		LinkedList_add(possibleMoves, newCastlingMove);
+		if(LinkedList_add(possibleMoves, newCastlingMove)){
+			PossibleMoveList_free(possibleMoves);
+			return NULL;
+		}
 	}
 	return possibleMoves;
 }

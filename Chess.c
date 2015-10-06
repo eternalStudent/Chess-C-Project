@@ -1085,7 +1085,7 @@ void executeButton(int buttonId){
 		case PROMOTE_TO_WHITE_BISHOP: performPromotion(Board_WHITE_BISHOP);  break;
 		case PROMOTE_TO_WHITE_ROOK: performPromotion(Board_WHITE_ROOK);  break;
 		case PROMOTE_TO_WHITE_KNIGHT: performPromotion(Board_WHITE_KNIGHT);  break;
-		case SET_BOARD: setScreenToBoardSettings(); break;
+		case SET_BOARD: setScreenToBoardSettings(); settingInvalidPiece = 0; kingIsMissing = 0; break;
 		case PLAY: setScreenToGame(1); GUI_paint(); break;
 		case AI_SETTINGS: setScreenToAISettings(); break;
 		case FINISHED_SETTING_BOARD:
@@ -1178,9 +1178,10 @@ void modifyPieceOnSettingsBoard(SDL_Event e){
 	char modifiedPiece = Board_getPiece(copyOfMainBoard, modifiedTileX, modifiedTileY);
 
 	if (modifyingPiece != Board_EMPTY){ //adding a piece
+		short pieceColor = (toupper(modifyingPiece) == modifyingPiece)? BLACK : WHITE;
 		if (PieceCounter_isAtMax(copyOfMainPieceCounter, modifyingPiece, modifiedTileX, modifiedTileY) || 
-			(pieceIsPawn(modifiedTileX, modifiedTileY) &&
-			Board_isFurthestRowForPlayer(Board_getColor(copyOfMainBoard, modifiedTileX, modifiedTileY), modifiedTileY))){
+			((toupper(modifyingPiece) == Board_BLACK_PAWN) &&
+			Board_isFurthestRowForPlayer(pieceColor, modifiedTileY))){
 			settingInvalidPiece = 1;
 		}
 		
