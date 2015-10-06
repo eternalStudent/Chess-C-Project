@@ -1112,7 +1112,6 @@ int setScreenToGame(short calledAtBeginningOfGame){
 
 int setScreenToAISettings(){
 	prepareWindowForNewScreen();
-	maxRecursionDepth = 1;
 	
 	SDL_Rect AISettingsHeaderPanelRect = {0, 0, 12*TILE_SIZE, TILE_SIZE}; 
 	Panel* AISettingsHeaderPanel = Panel_new(window->surface, AISettingsHeaderPanelRect, &AISettingsHeaderPanel_draw);
@@ -1219,7 +1218,7 @@ int setScreenToInstructions(){
 		return 1;
 	}
 
-	LinkedList_add(instructionsPanel->children, gotItButton);	
+	LinkedList_add(window->children, instructionsPanel);
 	return 0;
 }
 
@@ -1476,6 +1475,7 @@ int GUI_init(){
 	}
 	atexit(Window_free);
 	copyOfMainBoard = NULL;
+	SDL_WM_SetCaption("Chess", NULL);
 	
 	//create tree
 	window = Window_new(768, 768);

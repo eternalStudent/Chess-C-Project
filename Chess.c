@@ -552,7 +552,6 @@ int computeBestDepth(){
 		depth += 1;
 		switcher = !switcher;
 	}
-	printf("computed depth is %d\n", depth);
 	return depth;
 }
 
@@ -1331,7 +1330,7 @@ int main(int argc, char* argv[]){
 
 	while (1){
 		if (isEndGame()){
-			if (gameMode == CONSOLE){
+			if (displayMode == CONSOLE){
 				break;
 			}
 			else{
