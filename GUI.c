@@ -28,7 +28,7 @@ static SDL_Surface* loadImage(const char* path){
 static int drawImage(SDL_Surface* img, SDL_Surface* surface, int x, int y){
 	SDL_Rect pos = {x, y, img->w, img->h};
 	if(SDL_BlitSurface(img, 0, surface, &pos)){
-		printf("1ERROR: failed to blit image: %s\n", SDL_GetError());
+		printf("ERROR: failed to blit image: %s\n", SDL_GetError());
 		return 1;
 	}	
 	return 0;
@@ -50,7 +50,7 @@ static int drawImageByPath(const char* path, SDL_Surface* surface, int x, int y)
 
 static int drawSubImage(SDL_Surface* img, SDL_Rect crop, SDL_Surface* surface, SDL_Rect pos){
 	if (SDL_BlitSurface(img, &crop, surface, &pos)) {
-		printf("2ERROR: failed to blit image: %s\n", SDL_GetError());
+		printf("ERROR: failed to blit image: %s\n", SDL_GetError());
 		return 1;
 	}
 	return 0;
@@ -200,7 +200,9 @@ Radio* Radio_new(const char* path, Panel* parent, SDL_Rect crop, SDL_Rect pos, i
 	radio->absolutePos = findAbsoluteRectPosition(pos, parent);
 	radio->group = NULL;
 	radio->hidden = 0;
-	LinkedList_add(window->radios, radio);
+	if(LinkedList_add(window->radios, radio)){
+		return NULL;
+	}
 	return radio;
 }
 
@@ -268,9 +270,12 @@ RadioGroup* RadioGroup_new(int* parameter){
 	return group;
 }
 
-void RadioGroup_add(RadioGroup* group, Radio* radio){
-	LinkedList_add(group->radios, radio);
+int RadioGroup_add(RadioGroup* group, Radio* radio){
+	if(LinkedList_add(group->radios, radio)){
+		return -1;
+	}
 	radio->group = group;
+	return 0;
 }
 
 int RadioGroup_getValue(RadioGroup* group){
@@ -443,6 +448,10 @@ static int boardSettingsHeaderPanel_draw(Panel* panel){
 	}
 	
 	if (drawImageByPath("Textures/boardSettingsHeader.bmp", panel->surface, 4.2*TILE_SIZE, 0.2*TILE_SIZE)){
+		return 1;
+	}
+	
+	if (drawImageByPath("Textures/board_letters.bmp", panel->surface, 2*TILE_SIZE, 1.45*TILE_SIZE) != 0){
 		return 1;
 	}
 	
@@ -989,7 +998,11 @@ int setScreenToMainMenu(){
 	if(!mainMenuPanel){
 		return 1;
 	}
-	LinkedList_add(window->children, mainMenuPanel);
+	
+	if(LinkedList_add(window->children, mainMenuPanel)){
+		Panel_free(mainMenuPanel);
+		return 1;
+	}
 	
 	mainMenuPanel->children = LinkedList_new(&Button_free);
 	if(!mainMenuPanel->children){
@@ -1102,11 +1115,13 @@ int setScreenToGame(short calledAtBeginningOfGame){
 		}
 	}
 	
-	LinkedList_add(window->children, boardNumbersPanel);
-	LinkedList_add(window->children, buttonsPanel);
-	LinkedList_add(window->children, announcementsPanel);
-	LinkedList_add(window->children, boardPanel);
-	LinkedList_add(window->children, promotionPanel);
+	if(LinkedList_add(window->children, boardNumbersPanel) ||
+	   LinkedList_add(window->children, buttonsPanel) ||
+	   LinkedList_add(window->children, announcementsPanel) ||
+	   LinkedList_add(window->children, boardPanel) || 
+	   LinkedList_add(window->children, promotionPanel)){
+		   return 1;
+	}
 	return 0;
 }
 
@@ -1148,7 +1163,9 @@ int setScreenToAISettings(){
 		}
 	}
 	
-	LinkedList_add(AISettingsRadiosPanel->children, difficultyRadioGroup);
+	if(LinkedList_add(AISettingsRadiosPanel->children, difficultyRadioGroup)){
+		return 1;
+	}
 	
 	RadioGroup* AIColorRadioGroup = RadioGroup_new(&player1);
 	if (!AIColorRadioGroup){
@@ -1169,7 +1186,9 @@ int setScreenToAISettings(){
 		}	
 	}
 	
-	LinkedList_add(AISettingsRadiosPanel->children, AIColorRadioGroup);
+	if(LinkedList_add(AISettingsRadiosPanel->children, AIColorRadioGroup)){
+		return 1;
+	}
 	
 	
 	SDL_Rect AISettingsButtonsPanelRect = {0, 11*TILE_SIZE, 12*TILE_SIZE, TILE_SIZE};
@@ -1194,9 +1213,11 @@ int setScreenToAISettings(){
 		return 1;
 	}
 		
-	LinkedList_add(window->children, AISettingsHeaderPanel);
-	LinkedList_add(window->children, AISettingsRadiosPanel);
-	LinkedList_add(window->children, AISettingsButtonsPanel);
+	if(LinkedList_add(window->children, AISettingsHeaderPanel) ||
+	   LinkedList_add(window->children, AISettingsRadiosPanel) ||
+	   LinkedList_add(window->children, AISettingsButtonsPanel)){
+		   return 1;
+	}
 	return 0;
 }
 
@@ -1218,7 +1239,9 @@ int setScreenToInstructions(){
 		return 1;
 	}
 
-	LinkedList_add(window->children, instructionsPanel);
+	if(LinkedList_add(window->children, instructionsPanel)){
+		return 1;
+	}
 	return 0;
 }
 
@@ -1232,9 +1255,15 @@ int setScreenToBoardSettings(){
 	Board_copy(copyOfMainBoard, &board);
 	PieceCounter_copy(copyOfMainPieceCounter, counter);
 	
-	SDL_Rect headerRect = {0, 0, 12*TILE_SIZE, 2*TILE_SIZE};
+	SDL_Rect headerRect = {0, 0, 12*TILE_SIZE, 3*TILE_SIZE};
 	Panel* headerPanel = Panel_new(window->surface, headerRect, &boardSettingsHeaderPanel_draw);
 	if(!headerPanel){
+		return 1;
+	}
+	
+	SDL_Rect boardNumbersRect = {0, 2*TILE_SIZE, 12*TILE_SIZE, 8*TILE_SIZE};
+	Panel* boardNumbersPanel = Panel_new(window->surface, boardNumbersRect, &boardNumbersPanel_draw);
+	if (!boardNumbersPanel){
 		return 1;
 	}
 
@@ -1276,9 +1305,12 @@ int setScreenToBoardSettings(){
 		return 1;
 	}
 	
-	LinkedList_add(window->children, headerPanel);
-	LinkedList_add(window->children, boardPanel);
-	LinkedList_add(window->children, piecesPanel);
+	if (LinkedList_add(window->children, headerPanel) ||
+		LinkedList_add(window->children, boardNumbersPanel) ||
+		LinkedList_add(window->children, boardPanel) ||
+		LinkedList_add(window->children, piecesPanel)){
+			return 1;
+	}
 	
 	return 0;
 }
@@ -1318,7 +1350,9 @@ int setScreenToPlayerSettings(){
 		}
 	}
 	
-	LinkedList_add(playerSettingsRadiosPanel->children, gameModeRadioGroup);
+	if(LinkedList_add(playerSettingsRadiosPanel->children, gameModeRadioGroup)){
+		return 1;
+	}
 
 	RadioGroup* nextPlayerRadioGroup = RadioGroup_new(&first);
 	if (!nextPlayerRadioGroup){
@@ -1341,7 +1375,9 @@ int setScreenToPlayerSettings(){
 		}
 	}
 	
-	LinkedList_add(playerSettingsRadiosPanel->children, nextPlayerRadioGroup);
+	if(LinkedList_add(playerSettingsRadiosPanel->children, nextPlayerRadioGroup)){
+		return 1;
+	}
 	
 	
 	SDL_Rect playerSettingsHeaderRect = {0, 0, 12*TILE_SIZE, 4*TILE_SIZE};
@@ -1406,11 +1442,13 @@ int setScreenToPlayerSettings(){
 		}
 	}
 	
-	LinkedList_add(playerSettingsRadiosPanel->children, minimaxDepthForHintRadioGroup);	
+	if (LinkedList_add(playerSettingsRadiosPanel->children, minimaxDepthForHintRadioGroup) ||
+		LinkedList_add(window->children, playerSettingsRadiosPanel) ||
+		LinkedList_add(window->children, playerSettingsButtonsPanel) ||
+		LinkedList_add(window->children, playerSettingsHeaderPanel)){
+			return 1;
+	}
 	
-	LinkedList_add(window->children, playerSettingsRadiosPanel);
-	LinkedList_add(window->children, playerSettingsButtonsPanel);
-	LinkedList_add(window->children, playerSettingsHeaderPanel);
 	return 0;
 }
 
@@ -1421,7 +1459,13 @@ int setScreenToSaveLoad(short save){
 	Panel* saveLoadPanel = save? 	Panel_new(window->surface, rect, &savePanel_draw):
 									Panel_new(window->surface, rect, &loadPanel_draw);
 	saveLoadPanel->children = LinkedList_new(&Button_free);
-	LinkedList_add(window->children, saveLoadPanel);
+	if (!(saveLoadPanel->children)){
+		return 1;
+	}
+	
+	if(LinkedList_add(window->children, saveLoadPanel)){
+		return 1;
+	}
 	
 	for (int i = 0; i < NUMBER_OF_SAVE_SLOTS; i++){
 		if (!save){
@@ -1471,7 +1515,7 @@ int GUI_init(){
 	/* Initialize SDL and make sure it quits*/
 	if (SDL_Init(SDL_INIT_VIDEO) < 0) {
 		printf("ERROR: unable to init SDL: %s\n", SDL_GetError());
-		return 1;
+		return 2;
 	}
 	atexit(Window_free);
 	copyOfMainBoard = NULL;
@@ -1482,7 +1526,9 @@ int GUI_init(){
 	if(!window){
 		return 1;
 	}
-	setScreenToMainMenu();
+	if(setScreenToMainMenu()){
+		return 1;
+	}
 	return 0;
 }
 
@@ -1498,7 +1544,9 @@ int GUI_paint(){
 	Iterator_init(&iterator, window->children);
 	while(Iterator_hasNext(&iterator)){
 		Panel* panel = (Panel*)Iterator_next(&iterator);
-		panel->drawFunc(panel);
+		if (panel->drawFunc(panel)){
+			return 1;
+		}
 	}
 	
 	// We finished drawing

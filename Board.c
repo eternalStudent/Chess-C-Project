@@ -989,7 +989,7 @@ LinkedList* Board_getPossibleMoves(Board* board, int player){
  * Auxiliary function for printing the lines as part of printing the playing board.
  */
 static void printLine(){
-	printf("  |");
+	printf(" |");
 	for (int x = 1; x < Board_SIZE*4; x++){
 		printf("-");
 	}
@@ -1002,7 +1002,7 @@ static void printLine(){
 void Board_print(Board* board){
 	printLine();
 	for (int y = Board_SIZE-1; y >= 0 ; y--){
-		printf((y < 9? " %d": "%d"), y+1);
+		printf("%d", y+1);
 		for (int x = 0; x < Board_SIZE; x++){
 			printf("| %c ", board->matrix[x][y]);
 		}

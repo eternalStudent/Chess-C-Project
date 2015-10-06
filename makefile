@@ -9,7 +9,7 @@ clean:
 chessprog: $(OFILES)
 	gcc -o chessprog $(CFLAGS) $(OFILES) `sdl-config --libs` 
 	
-Chess.o: Chess.c Chess.h GUI.h
+Chess.o: Chess.c Chess.h GUI.h PossibleMove.h Board.h PossibleMoveList.h PieceCounter.h Iterator.h LinkedList.h
 	gcc -c $(CFLAGS) Chess.c
 	
 Board.o: Board.c Board.h PossibleMove.h PossibleMoveList.h LinkedList.h
@@ -30,5 +30,5 @@ Iterator.o: Iterator.c Iterator.h LinkedList.h
 LinkedList.o: LinkedList.c LinkedList.h
 	gcc -c $(CFLAGS) LinkedList.c
 	
-GUI.o: GUI.c Board.h LinkedList.h Iterator.h Chess.h PieceCounter.h
+GUI.o: GUI.c Board.h LinkedList.h Iterator.h Chess.h PieceCounter.h Board.h
 	gcc -c $(CFLAGS) -lm GUI.c 

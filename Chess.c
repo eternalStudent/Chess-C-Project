@@ -4,10 +4,13 @@
  * Initializes the global variables.
  */
   
-void initialize(){
+int initialize(){
 	Board_init(&board);
 	if (displayMode == GUI){
-		GUI_init();
+		int initializationError = GUI_init();
+		if (initializationError){
+			return initializationError;
+		}
 	}
 	state = SETTINGS;
 	maxRecursionDepth = 1;	
@@ -23,16 +26,21 @@ void initialize(){
 	kingIsMissing = 0;
 	modifyingPiece = '_';
 	time_t t;
-	srand((unsigned) time(&t));
+	srand((unsigned) time(&t)); // initializing random number generator
+	return 0;
 }
 
-void display(){
+int display(){
 	if (displayMode == GUI){
-		GUI_paint();		
+		if (GUI_paint()){
+			return 1;			
+		}
 	}
 	else{
 		Board_print(&board);
 	}
+	
+	return 0;
 }
 
 /*
@@ -583,15 +591,25 @@ int printBestMoves(char* command){
 		int score = alphabeta(currentMove, depth, !turn, INT_MIN, INT_MAX);
 		if (score > bestScore) {
 			LinkedList_removeAll(bestMoves);
-			LinkedList_add(bestMoves, currentMove);
+			if(LinkedList_add(bestMoves, currentMove)){
+				LinkedList_removeAll(bestMoves);
+				LinkedList_free(bestMoves);
+				PossibleMoveList_free(allPossibleMoves);
+				return 1;
+			}
 			bestScore = score;
 		}
 		else if (score == bestScore){
-			LinkedList_add(bestMoves, currentMove);
+			if(LinkedList_add(bestMoves, currentMove)){
+				LinkedList_removeAll(bestMoves);
+				LinkedList_free(bestMoves);		
+				PossibleMoveList_free(allPossibleMoves);
+				return 1;
+			}
 		}
 	}
 	PossibleMoveList_print(bestMoves);
-	LinkedList_removeAll(bestMoves);	//frees the nodes
+	LinkedList_removeAll(bestMoves);	//removes the nodes
 	LinkedList_free(bestMoves);			//frees the struct
 	LinkedList_free(allPossibleMoves);	//frees the moves
 	return 0;
@@ -637,7 +655,9 @@ int setSelectedMoveToBest(){
 	}
 	selectedX = bestMove->fromX;
 	selectedY = bestMove->fromY;
-	LinkedList_add(movesOfSelectedPiece, bestMove);
+	if(LinkedList_add(movesOfSelectedPiece, bestMove)){
+		return -1;
+	}
 	
 	return 0;
 }
@@ -772,7 +792,9 @@ int loadGame(char path[]){
 		}
 	}
 	fclose(gameFile);
-	display();
+	if (display()){
+		return 1;
+	}
 	return 0;
 }
 
@@ -780,6 +802,8 @@ int loadGame(char path[]){
  * Main function for handling the "load" command, for loading a saved game during the settings stage.
  *
  * @return: -9 if an error occured during the opening of the file
+ *			-1 if the command was formatted illegally (console mode only)
+ *			 1 if SDL failed to display after loading the game 
  *			 0 otherwise
  */
 int loadGameByCommand(char* command){	
@@ -968,7 +992,7 @@ void printError(int error){
 /*
  * The computer turn procedure.
  */
-void computerTurn(){
+int computerTurn(){
 	PossibleMove* bestMove = getBestMove();
 	if (!bestMove){
 		allocationFailed();
@@ -983,7 +1007,11 @@ void computerTurn(){
 	Board_update(&board, bestMove);
 	PossibleMove_free(bestMove);
 	turn = !turn;
-	display();
+	if (display()){
+		return 1;
+	}
+	
+	return 0;
 }
 
 void humanTurnConsole(int player){
@@ -1024,70 +1052,63 @@ void resetToDefaults(){
 	modifyingPiece = '_';	
 }
 
-void executeButton(int buttonId){
+int executeButton(int buttonId){
 	if (buttonId >= 200){
 		char path[12];
 		sprintf(path, "slot%02d.xml", buttonId-200);
 		loadGame(path);
-		setScreenToPlayerSettings();
-		return;
+		return setScreenToPlayerSettings(); 
 	}
 	if (buttonId >= 100){
 		char path[12];
 		sprintf(path, "slot%02d.xml", buttonId-100);
 		saveGame(path);
-		setScreenToGame(0);
-		return;
+		return setScreenToGame(0);
 	}
 	switch(buttonId){
-		case MAIN_MENU: setScreenToMainMenu(); break;
+		case MAIN_MENU: return setScreenToMainMenu();
 		case RETURN_TO_PLAYER_SETTINGS_WITHOUT_SAVING: 
 			if (copyOfMainBoard){
 				Board_free(copyOfMainBoard);
 			}
-			setScreenToPlayerSettings();
-			break;
-		case RETURN_TO_PLAYER_SETTINGS: setScreenToPlayerSettings(); break;
-		case NEW:
-			resetToDefaults();
-			setScreenToPlayerSettings();
-			break;
-		case LOAD: setScreenToSaveLoad(0); gameEnded = 0; isInCheck = 0; break;
-		case SAVE: setScreenToSaveLoad(1); break;
-		case RETURN_TO_GAME: setScreenToGame(0); break;
+			return setScreenToPlayerSettings(); 
+		case RETURN_TO_PLAYER_SETTINGS: return setScreenToPlayerSettings();
+		case NEW: resetToDefaults(); return setScreenToPlayerSettings();
+		case LOAD: gameEnded = 0; isInCheck = 0; return setScreenToSaveLoad(0);
+		case SAVE: return setScreenToSaveLoad(1);
+		case RETURN_TO_GAME: return setScreenToGame(0);
 		case HINT:
 			if (gameEnded){
-				break;
+				return 0;
 			}
-			setSelectedMoveToBest(); 
-			break;
+			return setSelectedMoveToBest();
 		case QUIT: exit(0); break;
-		case INSTRUCTIONS: setScreenToInstructions(); break; 
-		case CLEAR: Board_clear(copyOfMainBoard); PieceCounter_reset(copyOfMainPieceCounter); settingInvalidPiece = 0; break;
-		case BLACK_KING: kingIsMissing = 0; modifyingPiece = Board_BLACK_KING; break;
-		case BLACK_QUEEN: kingIsMissing = 0; modifyingPiece = Board_BLACK_QUEEN; break;
-		case BLACK_ROOK: kingIsMissing = 0; modifyingPiece = Board_BLACK_ROOK; break;
-		case BLACK_BISHOP: kingIsMissing = 0;  modifyingPiece = Board_BLACK_BISHOP; break;
-		case BLACK_KNIGHT: kingIsMissing = 0;  modifyingPiece = Board_BLACK_KNIGHT; break;
-		case BLACK_PAWN: kingIsMissing = 0;  modifyingPiece = Board_BLACK_PAWN; break;
-		case WHITE_KING: kingIsMissing = 0;  modifyingPiece = Board_WHITE_KING; break;
-		case WHITE_QUEEN: kingIsMissing = 0;  modifyingPiece = Board_WHITE_QUEEN; break;
-		case WHITE_ROOK: kingIsMissing = 0;  modifyingPiece = Board_WHITE_ROOK; break;
-		case WHITE_BISHOP: kingIsMissing = 0;  modifyingPiece = Board_WHITE_BISHOP; break;
-		case WHITE_KNIGHT: kingIsMissing = 0;  modifyingPiece = Board_WHITE_KNIGHT; break;
-		case WHITE_PAWN: kingIsMissing = 0;  modifyingPiece = Board_WHITE_PAWN; break;
-		case REMOVE_PIECE: kingIsMissing = 0;  modifyingPiece = Board_EMPTY; break;
-		case PROMOTE_TO_BLACK_QUEEN: performPromotion(Board_WHITE_QUEEN); break;
-		case PROMOTE_TO_BLACK_BISHOP: performPromotion(Board_BLACK_BISHOP); break;
-		case PROMOTE_TO_BLACK_ROOK: performPromotion(Board_BLACK_ROOK);  break;
-		case PROMOTE_TO_BLACK_KNIGHT: performPromotion(Board_BLACK_KNIGHT);  break;
-		case PROMOTE_TO_WHITE_QUEEN: performPromotion(Board_WHITE_QUEEN); break;
-		case PROMOTE_TO_WHITE_BISHOP: performPromotion(Board_WHITE_BISHOP);  break;
-		case PROMOTE_TO_WHITE_ROOK: performPromotion(Board_WHITE_ROOK);  break;
-		case PROMOTE_TO_WHITE_KNIGHT: performPromotion(Board_WHITE_KNIGHT);  break;
-		case SET_BOARD: setScreenToBoardSettings(); settingInvalidPiece = 0; kingIsMissing = 0; break;
-		case PLAY: setScreenToGame(1); GUI_paint(); break;
-		case AI_SETTINGS: setScreenToAISettings(); break;
+		case INSTRUCTIONS: return setScreenToInstructions();
+		case CLEAR: Board_clear(copyOfMainBoard); PieceCounter_reset(copyOfMainPieceCounter); settingInvalidPiece = 0; return 0;
+		case BLACK_KING: kingIsMissing = 0; modifyingPiece = Board_BLACK_KING; return 0;
+		case BLACK_QUEEN: kingIsMissing = 0; modifyingPiece = Board_BLACK_QUEEN; return 0;
+		case BLACK_ROOK: kingIsMissing = 0; modifyingPiece = Board_BLACK_ROOK; return 0;
+		case BLACK_BISHOP: kingIsMissing = 0;  modifyingPiece = Board_BLACK_BISHOP; return 0;
+		case BLACK_KNIGHT: kingIsMissing = 0;  modifyingPiece = Board_BLACK_KNIGHT; return 0;
+		case BLACK_PAWN: kingIsMissing = 0;  modifyingPiece = Board_BLACK_PAWN; return 0;
+		case WHITE_KING: kingIsMissing = 0;  modifyingPiece = Board_WHITE_KING; return 0;
+		case WHITE_QUEEN: kingIsMissing = 0;  modifyingPiece = Board_WHITE_QUEEN; return 0;
+		case WHITE_ROOK: kingIsMissing = 0;  modifyingPiece = Board_WHITE_ROOK; return 0;
+		case WHITE_BISHOP: kingIsMissing = 0;  modifyingPiece = Board_WHITE_BISHOP; return 0;
+		case WHITE_KNIGHT: kingIsMissing = 0;  modifyingPiece = Board_WHITE_KNIGHT; return 0;
+		case WHITE_PAWN: kingIsMissing = 0;  modifyingPiece = Board_WHITE_PAWN; return 0;
+		case REMOVE_PIECE: kingIsMissing = 0;  modifyingPiece = Board_EMPTY; return 0;
+		case PROMOTE_TO_BLACK_QUEEN: performPromotion(Board_WHITE_QUEEN); return 0;
+		case PROMOTE_TO_BLACK_BISHOP: performPromotion(Board_BLACK_BISHOP); return 0;
+		case PROMOTE_TO_BLACK_ROOK: performPromotion(Board_BLACK_ROOK);  return 0;
+		case PROMOTE_TO_BLACK_KNIGHT: performPromotion(Board_BLACK_KNIGHT);  return 0;
+		case PROMOTE_TO_WHITE_QUEEN: performPromotion(Board_WHITE_QUEEN); return 0;
+		case PROMOTE_TO_WHITE_BISHOP: performPromotion(Board_WHITE_BISHOP);  return 0;
+		case PROMOTE_TO_WHITE_ROOK: performPromotion(Board_WHITE_ROOK);  return 0;
+		case PROMOTE_TO_WHITE_KNIGHT: performPromotion(Board_WHITE_KNIGHT);  return 0;
+		case SET_BOARD: settingInvalidPiece = 0; kingIsMissing = 0; return setScreenToBoardSettings();
+		case PLAY: return (setScreenToGame(1) || GUI_paint()); 
+		case AI_SETTINGS: return setScreenToAISettings();
 		case FINISHED_SETTING_BOARD:
 			settingInvalidPiece = 0;
 			kingIsMissing = 0;
@@ -1098,9 +1119,12 @@ void executeButton(int buttonId){
 				Board_copy(&board, copyOfMainBoard); 
 				Board_free(copyOfMainBoard); 
 				PieceCounter_copy(counter, copyOfMainPieceCounter); 
-				setScreenToPlayerSettings(); 
+				if (setScreenToPlayerSettings()){
+					return 1;
+				}
 			}
-			break;
+			return 0;
+		default: return 0;
 	}
 }
 
@@ -1109,21 +1133,26 @@ void convertPixelsToBoardPosition(SDL_Event e, int* tileX, int* tileY){
     *tileY = 8-((e.button.y-2*TILE_SIZE)/TILE_SIZE);
 }   
 
-void leftMouseButtonUp(SDL_Event e){
+int leftMouseButtonUp(SDL_Event e){
 	convertPixelsToBoardPosition(e, &selectedX, &selectedY);
 	if (movesOfSelectedPiece){
 		LinkedList_free(movesOfSelectedPiece);
 		movesOfSelectedPiece = NULL;
 	}
 	movesOfSelectedPiece = Board_getPossibleMovesOfPiece(&board, selectedX, selectedY, 0);
+	if (!movesOfSelectedPiece){
+		return 1;
+	}
+	
+	return 0;
 }
 
-void rightMouseButtonUp(SDL_Event e){
+int rightMouseButtonUp(SDL_Event e){
 	chosePromotionMove = 0;
 	int x, y;
 	convertPixelsToBoardPosition(e, &x, &y);
 	if (!Board_getColor(&board, selectedX, selectedY) == turn){
-		return;
+		return 0;
 	}
 	int legalMove = 0;
 	
@@ -1133,6 +1162,9 @@ void rightMouseButtonUp(SDL_Event e){
 		chosePromotionMove = 1;
 	}
 	PossibleMove* move = PossibleMove_new(selectedX, selectedY, x, y, promoteTo, &board);
+	if (!move){
+		return 1;
+	}
 	
 	while(1){
 		if (PossibleMoveList_contains(movesOfSelectedPiece, move)){
@@ -1142,6 +1174,9 @@ void rightMouseButtonUp(SDL_Event e){
 		PossibleMove_free(move);
 		// castle move, rook eas selected
 		move = PossibleMove_new(selectedX, selectedY, 0, 0, 0, &board);
+		if (!move){
+			return 1;
+		}
 		if (PossibleMoveList_contains(movesOfSelectedPiece, move)){
 			legalMove = 1;
 			break;
@@ -1149,6 +1184,9 @@ void rightMouseButtonUp(SDL_Event e){
 		PossibleMove_free(move);
 		// castle move, king was selected
 		move = PossibleMove_new(x, y, 0, 0, 0, &board);
+		if (!move){
+			return 1;
+		}
 		if (PossibleMoveList_contains(movesOfSelectedPiece, move)){
 			legalMove = 1;
 			break;
@@ -1169,6 +1207,7 @@ void rightMouseButtonUp(SDL_Event e){
 		}
 	}
 	PossibleMove_free(move);
+	return 0;
 }
 
 void modifyPieceOnSettingsBoard(SDL_Event e){
@@ -1202,7 +1241,7 @@ void modifyPieceOnSettingsBoard(SDL_Event e){
 	modifyingPiece = '_';
 }
 
-void humanTurnGUI(int player){
+int humanTurnGUI(int player){
 	Button* button;
 	Radio* radio;
 	while (turn == player){
@@ -1222,7 +1261,7 @@ void humanTurnGUI(int player){
 						if (button){
 							if (button->id == PLAY){
 								executeButton(button->id);
-								return;
+								return 0;
 							}
 							else{
 								executeButton(button->id);
@@ -1235,13 +1274,20 @@ void humanTurnGUI(int player){
 							modifyPieceOnSettingsBoard(e);
 						}
 						else{
-							leftMouseButtonUp(e);
+							if(leftMouseButtonUp(e)){
+								return 1;
+							}
 						}
 					}
 
 					else if (e.button.button == SDL_BUTTON_RIGHT){
-						rightMouseButtonUp(e);
+						if (!chosePromotionMove){
+							if(rightMouseButtonUp(e)){
+								return 1;
+							}
+						}
 					}
+					
 					break;
 				case (SDL_MOUSEMOTION):
 					setAllButtonsToNormal();
@@ -1261,21 +1307,29 @@ void humanTurnGUI(int player){
 					break;
 			}
 		}
-		GUI_paint();
+		if (GUI_paint()){
+			return 1;
+		}
 		SDL_Delay(10);
 	}
+	
+	return 0;
 }
 
 /*
  * The human turn procedure
  */
-void humanTurn(int player){
+int humanTurn(int player){
 	if (displayMode == CONSOLE){
 		humanTurnConsole(player);
 	}
 	else{
-		humanTurnGUI(player); 
+		if(humanTurnGUI(player)){
+			return 1;
+		}
 	}
+	
+	return 0;
 }
 
 int isEndGame(){
@@ -1326,7 +1380,14 @@ int main(int argc, char* argv[]){
 		}
 	}
 	
-	initialize();
+	int initializationError = initialize();
+	if (initializationError == 1){ // allocation error occured
+		allocationFailed();
+	}
+	else if (initializationError == 2){ // SDL failed to initialize
+		exit(0);
+	}
+	
 	display();
 
 	while (1){
@@ -1339,7 +1400,9 @@ int main(int argc, char* argv[]){
 			}
 		}
 		if (turn != player1 && gameMode == SINGLE_PLAYER_MODE && !gameEnded){
-			computerTurn();
+			if (computerTurn()){
+				allocationFailed();
+			}
 		}
 		else{
 			humanTurn(turn);
