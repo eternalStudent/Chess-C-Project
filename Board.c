@@ -750,6 +750,14 @@ int Board_clearAndSafeHorizontalPathExistsForKing(Board* board, int fromX, int t
 	return exitcode;
 }
 
+/*
+ * Checks if a clear horizontal path exists on (board) between (fromX, y) and (toX, y).
+ * That is, a path that is not occupied by any piece.
+ * @params: (board) - the board to be checked
+ *		    (fromX), (toX), (y) - the relevant coordinates on the board
+ *
+ * @return: 1 if such a path exists, 0 otherwise
+ */
 int Board_clearHorizontalPathExists(Board* board, int fromX, int toX, int y){
 	int adjustment = (toX < fromX)? -1 : 1;
 	for (int x = fromX+adjustment; x != toX; x += adjustment){
@@ -1009,11 +1017,11 @@ void Board_print(Board* board){
 		printf("|\n");
 		printLine();
 	}
-	printf("   ");
+	
 	for (int y = 0; y < Board_SIZE; y++){
-		printf(" %c  ", (char)('a' + y));
+		printf("   %c", (char)('a' + y));
 	}
-	printf("\n");
+	printf("  \n");
 }
 
 /*

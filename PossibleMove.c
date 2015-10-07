@@ -43,7 +43,7 @@ int PossibleMove_equals(PossibleMove* this, PossibleMove* other){
 }
 
 /* 
- * Prints the structure in the format: "move <fromX,fromY> to <toX,toY> promotion".
+ * Prints the structure in the format: "<fromX,fromY> to <toX,toY> promotion".
  */
 void PossibleMove_print(PossibleMove* move){
 	if (move->toX != 0){

@@ -129,9 +129,6 @@ int readTile(char* str, int* x, int* y){
 	if (sscanf(str, "<%c,%1d>", &ch, y) != 2){
 		return -1;
 	}
-	if (*y > 8 || *y < 1 || ch < 97 || ch > 104){
-		return -1;
-	}
 	*x = ch-96;
 	return 0;
 }
@@ -366,6 +363,7 @@ int setFirstPlayer(char* command){
  * Main function for handling the "get_moves" command, for printing all possible moves for a given piece on the board during the game stage.
  *
  * @return: -5 if the input tile does not is not occupied by one of the current player's pieces
+ *          -2 if the tile given is invalid
  *			-1 if the input tile was not formatted legally
  *			 1 if an allocation failure occurred
  *			 0 otherwise
@@ -378,6 +376,10 @@ int printMovesOfPiece(char* command){
 	int x, y;
 	if (readTile(tile, &x, &y) == -1){
 		return -1;
+	}
+	
+	if (!Board_isInRange(x, y)){
+		return -2;
 	}
 	
 	if (Board_getColor(&board, x, y) != turn){
@@ -410,6 +412,11 @@ PossibleMove* readMove(char* command, int* exitcode){
 	if (readTile(fromTile, &fromX, &fromY) == -1 
 			|| readTile(toTile, &toX, &toY) == -1){
 		*exitcode = -1;
+		return NULL;
+	}
+	
+	if (!Board_isInRange(fromX, fromY) || !Board_isInRange(toX, toY) ){
+		*exitcode = -2;
 		return NULL;
 	}
 	
@@ -999,9 +1006,8 @@ int computerTurn(){
 	}
 	
 	if (displayMode == CONSOLE){
-		printf("Computer: ");
+		printf("Computer: move ");
 		PossibleMove_print(bestMove);
-		printf("\n");
 	}
 
 	Board_update(&board, bestMove);
@@ -1259,13 +1265,7 @@ int humanTurnGUI(int player){
 						button = getButtonByMousePosition(e.button.x, e.button.y);
 						radio = getRadioByMousePosition(e.button.x, e.button.y);
 						if (button){
-							if (button->id == PLAY){
-								executeButton(button->id);
-								return 0;
-							}
-							else{
-								executeButton(button->id);
-							}
+							return executeButton(button->id); 
 						}
 						else if (radio){
 							Radio_select(radio, 1);
@@ -1405,7 +1405,10 @@ int main(int argc, char* argv[]){
 			}
 		}
 		else{
-			humanTurn(turn);
+			short error = humanTurn(turn);  
+			if (error != 0 && error != 2){ //error occured or "start" command entered
+				return error;
+			}
 		}	
 	}
 

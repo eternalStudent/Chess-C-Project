@@ -4,6 +4,10 @@ Window* window;
 
 //general functions
 
+/*
+ * Sets the correct color key for (img).
+ * @return: 1 if any failures occured, 0 otherwise
+ */
 static int setBlueToTransparent(SDL_Surface* img){
 	if (SDL_SetColorKey(img, SDL_SRCCOLORKEY, SDL_MapRGB(img->format, 127, 127, 255))) {
 		printf("ERROR: failed to set color key: %s\n", SDL_GetError());
@@ -13,6 +17,11 @@ static int setBlueToTransparent(SDL_Surface* img){
 	return 0;
 }
 
+/*
+ * Loads a BMP image file into an SDL_Surface structure and return the structure.
+ * @params: (path) - the relative path of the BMP file to be loaded
+ * @return: NULL if any failures occured, the SDL_Surface structure containing the image otherwise 
+ */
 static SDL_Surface* loadImage(const char* path){
 	SDL_Surface* img = SDL_LoadBMP(path);
 	if (!img){
@@ -25,6 +34,11 @@ static SDL_Surface* loadImage(const char* path){
 	return img;
 }
 
+/*
+ * Draws the surface (img) on the surface (surface), 
+ * (x,y) being the coordinates on (surface) where the top left corner of (img) will be.
+ * @return: 1 if any failures occured, 0 otherwise
+ */
 static int drawImage(SDL_Surface* img, SDL_Surface* surface, int x, int y){
 	SDL_Rect pos = {x, y, img->w, img->h};
 	if(SDL_BlitSurface(img, 0, surface, &pos)){
@@ -34,6 +48,11 @@ static int drawImage(SDL_Surface* img, SDL_Surface* surface, int x, int y){
 	return 0;
 }
 
+/*
+ * Draws the image stored on a BMP file located at (path) on (surface),
+ * (x,y) being the coordinates on (surface) where the top left corner of (img) will be. 
+ * @return: 1 if any failures occured, 0 otherwise
+ */
 static int drawImageByPath(const char* path, SDL_Surface* surface, int x, int y){
 	SDL_Surface* img = loadImage(path);
 	if (!img){
@@ -48,6 +67,11 @@ static int drawImageByPath(const char* path, SDL_Surface* surface, int x, int y)
 	return 0;
 }
 
+/*
+ * Draws the image stored on a BMP file located at (path) on (surface),
+ * (x,y) being the coordinates on (surface) where the top left corner of (img) will be. 
+ * @return: 1 if any failures occured, 0 otherwise
+ */
 static int drawSubImage(SDL_Surface* img, SDL_Rect crop, SDL_Surface* surface, SDL_Rect pos){
 	if (SDL_BlitSurface(img, &crop, surface, &pos)) {
 		printf("ERROR: failed to blit image: %s\n", SDL_GetError());
@@ -56,6 +80,10 @@ static int drawSubImage(SDL_Surface* img, SDL_Rect crop, SDL_Surface* surface, S
 	return 0;
 }
 
+/*
+ * Fills (panel) with our chosen background color.
+ * @return: 1 if any failures occured, 0 otherwise
+ */
 static int fillBackground(Panel* panel){
 	if (SDL_FillRect(panel->surface, 0, BACKGROUND_WHITE) != 0) {
 		printf("ERROR: failed to draw rect: %s\n", SDL_GetError());
@@ -64,6 +92,10 @@ static int fillBackground(Panel* panel){
 	return 0;
 }
 
+/*
+ * Flips the buffer belonging to (surface).
+ * @return: 1 if any failures occured, 0 otherwise
+ */
 static int flipBuffer(SDL_Surface* surface){
 	if (SDL_Flip(surface)) {
 		printf("ERROR: failed to flip buffer: %s\n", SDL_GetError());
@@ -72,11 +104,18 @@ static int flipBuffer(SDL_Surface* surface){
 	return 0;
 }
 
+/*
+ * @return: A new SDL_Rect structure of the form {x, y, w, h}
+ */
 static SDL_Rect Rect_new(int x, int y, int w, int h){
 	SDL_Rect rect = {x, y, w, h};
 	return rect;
 }
 
+/*
+ * @return: A new SDL_Rect structure, describing the absolute location of (rect),
+ * based on its relative position inside (parent).
+ */
 static SDL_Rect findAbsoluteRectPosition(SDL_Rect rect, Panel* parent){
 	int panelX = parent->rect.x;
 	int panelY = parent->rect.y;
@@ -86,8 +125,17 @@ static SDL_Rect findAbsoluteRectPosition(SDL_Rect rect, Panel* parent){
 	return Rect_new(panelX+rectX, panelY+rectY, rect.w, rect.h);
 }
 
-//Label function
+//Label functions
 
+/*
+ * Creates a new Label structure.
+ * @params:
+ *		(path) - relative path of an image file containing the relevant label image
+ *		(parent) - the surface upon which this label will be drawn
+ *		(crop) - an SDL_Rect supplied to crop the correct image from the image supplied at (path)
+ *		(pos) - the relative position of this label inside (parent)
+ * @return: a pointer to the new label, NULL otherwise
+ */
 Label* Label_new(const char* path, SDL_Surface* parent, SDL_Rect crop, SDL_Rect pos){
 	Label* label = (Label*)malloc(sizeof(Label));
 	if (!label){
@@ -104,6 +152,9 @@ Label* Label_new(const char* path, SDL_Surface* parent, SDL_Rect crop, SDL_Rect 
 	return label;
 }
 
+/*
+ * Draws a label structure, based on the data contained in it.
+ */
 int Label_draw(void* data){
 	Label* label = (Label*)data;	
 	if (drawSubImage(label->image, label->crop, label->parent, label->pos)){
@@ -112,6 +163,9 @@ int Label_draw(void* data){
 	return 0;
 }
 
+/*
+ * Frees a label structure.
+ */
 void Label_free(void* data){
 	Label* label = (Label*)data;
 	SDL_FreeSurface(label->image);
@@ -120,6 +174,16 @@ void Label_free(void* data){
 
 //Button functions
 
+/*
+ * Creates a new Button structure.
+ * @params:
+ *		(id) - a unique identifier of the button
+ *		(path) - relative path of an image file containing the relevant button image
+ *		(parent) - the panel upon which this label will be drawn
+ *		(rect) - the relative position of this label inside (parent)
+ *      (y) - the row number at which the relevant button image begins at the image given by (path)
+ * @return: a pointer to the new button, NULL otherwise
+ */
 static Button* Button_new(int id, Panel* parent, SDL_Rect rect, int y, const char* path){
 	Button* button = (Button*)malloc(sizeof(Button));
 	if (!button){
@@ -149,14 +213,23 @@ static Button* Button_new(int id, Panel* parent, SDL_Rect rect, int y, const cha
 	return button;
 }
 
+/*
+ * Sets a button dislpayed image to the normal one (not pressed or hovered).
+ */
 void Button_setToNormal(Button* button){
 	button->current = button->normal;
 }
 
+/*
+ * Sets a button dislpayed image to the hovered one.
+ */
 void Button_setToHovered(Button* button){
 	button->current = button->hovered;
 }
 
+/*
+ * Sets a button dislpayed image to the pressed one.
+ */
 void Button_setToPressed(Button* button){
 	button->current = button->pressed;
 }
@@ -253,7 +326,6 @@ void RadioGroup_changeVisibility(RadioGroup* group, short hide){
 	}
 }
 
-
 RadioGroup* RadioGroup_new(int* parameter){
 	RadioGroup* group = (RadioGroup*)malloc(sizeof(RadioGroup));
 	if (!group){
@@ -334,6 +406,15 @@ static int Panel_flipAndDraw(Panel* panel){
 		return 1;
 	}
 	return 0;
+}
+
+static void Panel_free(void* data){
+	Panel* panel = (Panel*)data;
+	SDL_FreeSurface(panel->surface);
+	if (panel->children){
+		LinkedList_free(panel->children);
+	}	
+	free(panel);
 }
 
 static int MainMenu_draw(Panel* panel){
@@ -943,14 +1024,6 @@ int promotionPanel_draw(Panel* panel){
 	}
 	
 	return 0;
-}
-static void Panel_free(void* data){
-	Panel* panel = (Panel*)data;
-	SDL_FreeSurface(panel->surface);
-	if (panel->children){
-		LinkedList_free(panel->children);
-	}	
-	free(panel);
 }
 
 //Window functions
